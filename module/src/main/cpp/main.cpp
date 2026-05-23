@@ -1,15 +1,12 @@
-#include <cstdlib>
-#include <unistd.h>
-#include <fcntl.h>
-#include <android/log.h>
+#include <zygisk.hpp>
 #include <thread>
 #include <fstream>
 #include <string>
 #include <vector>
 #include <sys/mman.h>
 #include <cstring>
-
-#include "zygisk.hpp"
+#include <android/log.h>
+#include <stdlib.h> // Untuk getprogname()
 
 using namespace zygisk;
 
@@ -43,6 +40,7 @@ public:
         char target[4];
         stringToBytes(val, type, target);
         FILE* fp = fopen("/proc/self/maps", "r");
+        if (!fp) return;
         char line[256];
         while (fgets(line, sizeof(line), fp)) {
             uintptr_t s, e;
@@ -80,27 +78,21 @@ public:
 std::vector<uintptr_t> MemoryTools::results;
 MemoryRange MemoryTools::current_range = RANGE_ALL;
 
-// --- KELAS MODUL UTAMA ---
+// --- KELAS MODUL ---
 class MyModule : public ModuleBase {
 public:
     void postAppSpecialize(const AppSpecializeArgs *args) override {
-        // Ambil JNIEnv untuk konversi jstring ke char*
-        JNIEnv* env = args->env;
+        // Gunakan getprogname() untuk mendapatkan nama paket proses saat ini
+        const char* proc = getprogname();
         
-        // Konversi jstring ke const char*
-        const char *name = env->GetStringUTFChars(args->nice_name, nullptr);
-        
-        // Sekarang gunakan 'name' (yang bertipe const char*)
-        if (!name || strcmp(name, "com.tencent.ig") != 0) {
-            env->ReleaseStringUTFChars(args->nice_name, name); // Penting: release memory
-            return;
-        }
+        // GANTI dengan package name game Anda
+        if (strcmp(proc, "com.tencent.ig") != 0) return;
 
-        LOGD("Module aktif di: %s", name);
-        env->ReleaseStringUTFChars(args->nice_name, name); // Release setelah digunakan
+        LOGD("Module aktif di proses: %s", proc);
 
         std::thread([]() {
-            sleep(20); // Tunggu game inisialisasi
+            sleep(15); // Tunggu sampai game load sempurna
+            LOGD("Module thread dimulai");
 
             while (true) {
                 std::ifstream f("/data/local/tmp/trigger.txt");
@@ -120,15 +112,16 @@ public:
                             LOGD("Module 1 dieksekusi");
                             break;
                         case 2:
-                            // Logic module 2
+                            // Tambah logika module 2
                             break;
                     }
                     MemoryTools::ClearResults();
                 }
-                usleep(500000);
+                usleep(500000); // Cek setiap 0.5 detik
             }
         }).detach();
     }
-}
+};
+
 // Register module
 REGISTER_ZYGISK_MODULE(MyModule)
