@@ -1,79 +1,125 @@
-/* Copyright 2022-2023 John "topjohnwu" Wu
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
- * AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
- * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
- * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
- * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-
 #include <cstdlib>
 #include <unistd.h>
 #include <fcntl.h>
 #include <android/log.h>
+#include <thread>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <sys/mman.h>
+#include <cstring>
 
 #include "zygisk.hpp"
 
-using zygisk::Api;
-using zygisk::AppSpecializeArgs;
-using zygisk::ServerSpecializeArgs;
+using namespace zygisk;
 
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "MyModule", __VA_ARGS__)
 
-class MyModule : public zygisk::ModuleBase {
-public:
-    void onLoad(Api *api, JNIEnv *env) override {
-        this->api = api;
-        this->env = env;
-    }
+// --- LOGIKA MEMORY TOOLS ---
+enum DataType { TYPE_DWORD, TYPE_FLOAT };
+enum MemoryRange { RANGE_ALL, RANGE_OTHER };
 
-    void preAppSpecialize(AppSpecializeArgs *args) override {
-        // Use JNI to fetch our process name
-        const char *process = env->GetStringUTFChars(args->nice_name, nullptr);
-        preSpecialize(process);
-        env->ReleaseStringUTFChars(args->nice_name, process);
-    }
-
-    void preServerSpecialize(ServerSpecializeArgs *args) override {
-        preSpecialize("system_server");
-    }
-
+class MemoryTools {
 private:
-    Api *api;
-    JNIEnv *env;
+    static std::vector<uintptr_t> results;
+    static MemoryRange current_range;
 
-    void preSpecialize(const char *process) {
-        // Demonstrate connecting to to companion process
-        // We ask the companion for a random number
-        unsigned r = 0;
-        int fd = api->connectCompanion();
-        read(fd, &r, sizeof(r));
-        close(fd);
-        LOGD("process=[%s], r=[%u]\n", process, r);
-
-        // Since we do not hook any functions, we should let Zygisk dlclose ourselves
-        api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
+    static void stringToBytes(const std::string& val, DataType type, void* output) {
+        if (type == TYPE_DWORD) {
+            int d = std::stoi(val);
+            memcpy(output, &d, 4);
+        } else {
+            float f = std::stof(val);
+            memcpy(output, &f, 4);
+        }
     }
 
+public:
+    static void SetSearchRange(MemoryRange range) { current_range = range; }
+    static void ClearResults() { results.clear(); }
+
+    static void MemorySearch(const std::string& val, DataType type) {
+        results.clear();
+        char target[4];
+        stringToBytes(val, type, target);
+        FILE* fp = fopen("/proc/self/maps", "r");
+        char line[256];
+        while (fgets(line, sizeof(line), fp)) {
+            uintptr_t s, e;
+            char path[256];
+            if (sscanf(line, "%lx-%lx r--p %*x %*s %*d %s", &s, &e, path) == 3) {
+                bool shouldScan = (current_range == RANGE_ALL);
+                if (current_range == RANGE_OTHER) {
+                    if (strstr(path, ".so") || strlen(path) == 0) {
+                        if (!strstr(path, "libc") && !strstr(path, "stack")) shouldScan = true;
+                    }
+                }
+                if (shouldScan) {
+                    for (uintptr_t a = s; a < e - 4; a += 4) {
+                        if (memcmp((void*)a, target, 4) == 0) results.push_back(a);
+                    }
+                }
+            }
+        }
+        fclose(fp);
+    }
+
+    static void MemoryWrite(const std::string& val, int offset, DataType type) {
+        char target[4];
+        stringToBytes(val, type, target);
+        for (auto addr : results) {
+            uintptr_t targetAddr = addr + offset;
+            uintptr_t page = targetAddr & ~4095;
+            mprotect((void*)page, 4096, PROT_READ | PROT_WRITE);
+            memcpy((void*)targetAddr, target, 4);
+            mprotect((void*)page, 4096, PROT_READ);
+        }
+    }
 };
 
-static int urandom = -1;
+std::vector<uintptr_t> MemoryTools::results;
+MemoryRange MemoryTools::current_range = RANGE_ALL;
 
-static void companion_handler(int i) {
-    if (urandom < 0) {
-        urandom = open("/dev/urandom", O_RDONLY);
+// --- KELAS MODUL UTAMA ---
+class MyModule : public ModuleBase {
+public:
+    void postAppSpecialize(const AppSpecializeArgs *args) override {
+        // Ganti dengan package name target Anda
+        if (!args->nice_name || strcmp(args->nice_name, "com.tencent.ig") != 0) return;
+
+        LOGD("Module aktif di: %s", args->nice_name);
+
+        std::thread([]() {
+            sleep(20); // Tunggu game inisialisasi
+
+            while (true) {
+                std::ifstream f("/data/local/tmp/trigger.txt");
+                std::string line;
+                if (std::getline(f, line)) {
+                    f.close();
+                    remove("/data/local/tmp/trigger.txt");
+
+                    int moduleNum = (line.length() > 0) ? (line.back() - '0') : 0;
+                    LOGD("Trigger diterima: %d", moduleNum);
+
+                    switch (moduleNum) {
+                        case 1:
+                            MemoryTools::SetSearchRange(RANGE_OTHER);
+                            MemoryTools::MemorySearch("8200", TYPE_DWORD);
+                            MemoryTools::MemoryWrite("6", 0, TYPE_DWORD);
+                            LOGD("Module 1 dieksekusi");
+                            break;
+                        case 2:
+                            // Logic module 2
+                            break;
+                    }
+                    MemoryTools::ClearResults();
+                }
+                usleep(500000);
+            }
+        }).detach();
     }
-    unsigned r;
-    read(urandom, &r, sizeof(r));
-    LOGD("companion r=[%u]\n", r);
-    write(i, &r, sizeof(r));
-}
+};
 
-// Register our module class and the companion handler function
+// Register module
 REGISTER_ZYGISK_MODULE(MyModule)
-REGISTER_ZYGISK_COMPANION(companion_handler)
