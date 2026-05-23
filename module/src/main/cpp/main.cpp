@@ -129,5 +129,6 @@ public:
             }
         }).detach();
     }
+}
 // Register module
 REGISTER_ZYGISK_MODULE(MyModule)
