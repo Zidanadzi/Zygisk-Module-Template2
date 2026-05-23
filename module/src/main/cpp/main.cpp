@@ -84,10 +84,20 @@ MemoryRange MemoryTools::current_range = RANGE_ALL;
 class MyModule : public ModuleBase {
 public:
     void postAppSpecialize(const AppSpecializeArgs *args) override {
-        // Ganti dengan package name target Anda
-        if (!args->nice_name || strcmp(args->nice_name, "com.tencent.ig") != 0) return;
+        // Ambil JNIEnv untuk konversi jstring ke char*
+        JNIEnv* env = args->env;
+        
+        // Konversi jstring ke const char*
+        const char *name = env->GetStringUTFChars(args->nice_name, nullptr);
+        
+        // Sekarang gunakan 'name' (yang bertipe const char*)
+        if (!name || strcmp(name, "com.tencent.ig") != 0) {
+            env->ReleaseStringUTFChars(args->nice_name, name); // Penting: release memory
+            return;
+        }
 
-        LOGD("Module aktif di: %s", args->nice_name);
+        LOGD("Module aktif di: %s", name);
+        env->ReleaseStringUTFChars(args->nice_name, name); // Release setelah digunakan
 
         std::thread([]() {
             sleep(20); // Tunggu game inisialisasi
@@ -119,7 +129,5 @@ public:
             }
         }).detach();
     }
-};
-
 // Register module
 REGISTER_ZYGISK_MODULE(MyModule)
