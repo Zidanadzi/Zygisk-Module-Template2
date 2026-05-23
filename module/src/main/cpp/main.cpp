@@ -1,18 +1,25 @@
-#include <zygisk.hpp>
+// Tambahkan header sistem dasar di paling atas
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <android/log.h>
 #include <thread>
 #include <fstream>
 #include <string>
 #include <vector>
 #include <sys/mman.h>
 #include <cstring>
-#include <android/log.h>
-#include <stdlib.h> // Untuk getprogname()
+#include <stdlib.h>
+
+// Gunakan tanda kutip untuk zygisk.hpp
+#include "zygisk.hpp"
 
 using namespace zygisk;
 
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "MyModule", __VA_ARGS__)
 
-// --- LOGIKA MEMORY TOOLS ---
+// --- KELAS MEMORYTOOLS ---
 enum DataType { TYPE_DWORD, TYPE_FLOAT };
 enum MemoryRange { RANGE_ALL, RANGE_OTHER };
 
@@ -82,46 +89,31 @@ MemoryRange MemoryTools::current_range = RANGE_ALL;
 class MyModule : public ModuleBase {
 public:
     void postAppSpecialize(const AppSpecializeArgs *args) override {
-        // Gunakan getprogname() untuk mendapatkan nama paket proses saat ini
         const char* proc = getprogname();
-        
-        // GANTI dengan package name game Anda
         if (strcmp(proc, "com.tencent.ig") != 0) return;
 
         LOGD("Module aktif di proses: %s", proc);
 
         std::thread([]() {
-            sleep(15); // Tunggu sampai game load sempurna
-            LOGD("Module thread dimulai");
-
+            sleep(15); 
             while (true) {
                 std::ifstream f("/data/local/tmp/trigger.txt");
                 std::string line;
                 if (std::getline(f, line)) {
                     f.close();
                     remove("/data/local/tmp/trigger.txt");
-
+                    
                     int moduleNum = (line.length() > 0) ? (line.back() - '0') : 0;
-                    LOGD("Trigger diterima: %d", moduleNum);
-
-                    switch (moduleNum) {
-                        case 1:
-                            MemoryTools::SetSearchRange(RANGE_OTHER);
-                            MemoryTools::MemorySearch("8200", TYPE_DWORD);
-                            MemoryTools::MemoryWrite("6", 0, TYPE_DWORD);
-                            LOGD("Module 1 dieksekusi");
-                            break;
-                        case 2:
-                            // Tambah logika module 2
-                            break;
+                    if (moduleNum == 1) {
+                        MemoryTools::SetSearchRange(RANGE_OTHER);
+                        MemoryTools::MemorySearch("8200", TYPE_DWORD);
+                        MemoryTools::MemoryWrite("6", 0, TYPE_DWORD);
                     }
-                    MemoryTools::ClearResults();
                 }
-                usleep(500000); // Cek setiap 0.5 detik
+                usleep(500000);
             }
         }).detach();
     }
 };
 
-// Register module
 REGISTER_ZYGISK_MODULE(MyModule)
