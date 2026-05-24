@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <android/log.h>
 
-// Panggil file header Anda di sini
+// Panggil file header MemoryTools Anda terlebih dahulu
 #include "MemoryTools.h" 
 
 #define LOG_TAG "MainCPP"
@@ -24,28 +24,25 @@ int main(int argc, char *argv[])
     }
 
     // Mengambil pilihan fitur dari parameter Zygisk
-    int Fitur = atoi(argv[1]); 
+    int Fitur = atoi(argv); 
 
     {
         char pkg[100] = {0};
         
-        // Membuat Objek/Instance dari Class MemoryTool yang ada di MemoryTools.h
-        MemoryTool tool;
-
-        // Memanggil fungsi pengecekan apk melalui objek 'tool'
-        if (tool.isapkrunning((char*)"com.tencent.ig") == 1)
+        // Panggil fungsi pengecekan apk secara langsung dengan scope global (::)
+        if (::isapkrunning((char*)"com.tencent.ig") == 1)
         {
             sprintf(pkg, "com.tencent.ig");
         }
-        else if (tool.isapkrunning((char*)"com.vng.pubgmobile") == 1)
+        else if (::isapkrunning((char*)"com.vng.pubgmobile") == 1)
         {
             sprintf(pkg, "com.vng.pubgmobile");
         }
-        else if (tool.isapkrunning((char*)"com.pubg.krmobile") == 1)
+        else if (::isapkrunning((char*)"com.pubg.krmobile") == 1)
         {
             sprintf(pkg, "com.pubg.krmobile");
         }
-        else if (tool.isapkrunning((char*)"com.rekoo.pubgm") == 1)
+        else if (::isapkrunning((char*)"com.rekoo.pubgm") == 1)
         {
             sprintf(pkg, "com.rekoo.pubgm");
         }
@@ -58,8 +55,8 @@ int main(int argc, char *argv[])
             sprintf(getRoot, "MODE_NO_ROOT");
         }
 
-        // Jalankan inisialisasi memori melalui objek 'tool'
-        tool.initXMemoryTools(pkg, getRoot);
+        // Jalankan inisialisasi memori secara langsung
+        ::initXMemoryTools(pkg, getRoot);
         
         LOGI("Zygisk meluncurkan Game: %s dengan Mode: %s, Menjalankan Fitur: %d", pkg, getRoot, Fitur);
 
@@ -69,19 +66,19 @@ int main(int argc, char *argv[])
         case 1:
             LOGI("Menjalankan Fitur LOGIKA CASE 1");
             
-            // PERBAIKAN UTAMA: Panggil fungsi memori wajib melalui objek 'tool.'
-            tool.MemorySearch((char*)"220", TYPE_FLOAT);
-            tool.MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
-            tool.MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
-            tool.MemoryWrite((char*)"600", 0, TYPE_FLOAT);   
+            // Panggil fungsi memori secara langsung menggunakan scope global (::)
+            ::MemorySearch((char*)"220", TYPE_FLOAT);
+            ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
+            ::MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
+            ::MemoryWrite((char*)"600", 0, TYPE_FLOAT);   
             break;
             
         case 2:
             LOGI("Menjalankan Fitur LOGIKA CASE 2");
-            tool.MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
-            tool.MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
-            tool.MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
-            tool.MemoryWrite((char*)"200", 0, TYPE_FLOAT);
+            ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
+            ::MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
+            ::MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
+            ::MemoryWrite((char*)"200", 0, TYPE_FLOAT);
             break;
             
         default:
