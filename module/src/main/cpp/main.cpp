@@ -2,7 +2,6 @@
 #include <android/log.h>
 #include <thread>
 #include <fstream>
-#include <string>
 #include <vector>
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -13,112 +12,83 @@ using namespace zygisk;
 
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "MyModule", __VA_ARGS__)
 
+enum DataType { TYPE_FLOAT, TYPE_DWORD };
 enum Range { CODE_APP, ANONYMOUS, ALL };
 
 class MemoryTools {
 public:
-    static int get_mem_fd() {
-        static int fd = open("/proc/self/mem", O_RDWR);
-        return fd;
+    static int get_mem_fd() { static int fd = open("/proc/self/mem", O_RDWR); return fd; }
+
+    static void Patch(uintptr_t addr, float val_f, int val_d, DataType type) {
+        uintptr_t page = addr & ~0xFFF;
+        mprotect((void*)page, 0x1000, PROT_READ | PROT_WRITE | PROT_EXEC);
+        type == TYPE_FLOAT ? pwrite(get_mem_fd(), &val_f, 4, addr) : pwrite(get_mem_fd(), &val_d, 4, addr);
+        mprotect((void*)page, 0x1000, PROT_READ | PROT_EXEC);
     }
 
-    static bool MemoryOffset(uintptr_t addr, float val) {
-        float mem_val;
-        return (pread(get_mem_fd(), &mem_val, 4, addr) == 4 && mem_val == val);
-    }
-
-    static void Patch(uintptr_t addr, float val) {
-        int fd = get_mem_fd();
-        uintptr_t page_start = addr & ~0xFFF;
-        if (mprotect((void*)page_start, 0x1000, PROT_READ | PROT_WRITE | PROT_EXEC) == 0) {
-            pwrite(fd, &val, sizeof(float), addr);
-            mprotect((void*)page_start, 0x1000, PROT_READ | PROT_EXEC);
-        }
-    }
-
-    static std::vector<uintptr_t> Search(std::string val, Range range, const char* lib = nullptr) {
+    static std::vector<uintptr_t> SearchGroup(const std::vector<std::pair<int, float>>& group, Range range, DataType type, const char* lib = nullptr) {
         std::vector<uintptr_t> results;
-        float target = std::stof(val);
-        FILE* fp = fopen("/proc/self/maps", "r");
+        char line[256]; FILE* fp = fopen("/proc/self/maps", "r");
         if (!fp) return results;
-        char line[256];
-        while (fgets(line, sizeof(line), fp)) {
-            unsigned int s, e;
-            char perms[5], path[256];
-            sscanf(line, "%x-%x %4s %*x %*s %*s %s", &s, &e, perms, path);
-            
-            if (!strstr(perms, "w")) continue;
 
-            bool match = (range == ALL) || 
-                         (range == CODE_APP && lib && strstr(path, lib)) ||
-                         (range == ANONYMOUS && strlen(path) == 0);
+        while (fgets(line, sizeof(line), fp)) {
+            unsigned int s, e; char p[5], path[256];
+            sscanf(line, "%x-%x %4s %*x %*s %*s %s", &s, &e, p, path);
+            if (!strstr(p, "w")) continue;
+
+            bool match = (range == ALL) || (range == CODE_APP && lib && strstr(path, lib)) || (range == ANONYMOUS && strlen(path) == 0);
             if (match) {
-                for (uintptr_t a = (uintptr_t)s; a < (uintptr_t)e - 4; a += 4) {
-                    float buf;
-                    if (pread(get_mem_fd(), &buf, 4, a) == 4 && buf == target) results.push_back(a);
+                for (uintptr_t a = (uintptr_t)s; a < (uintptr_t)e - 100; a += 4) {
+                    bool matchGroup = true;
+                    for (auto& item : group) {
+                        float val; pread(get_mem_fd(), &val, 4, a + item.first);
+                        if (val != item.second) { matchGroup = false; break; }
+                    }
+                    if (matchGroup) results.push_back(a);
                 }
             }
         }
-        fclose(fp);
-        return results;
+        fclose(fp); return results;
     }
 };
 
 class MyModule : public ModuleBase {
 public:
-    void onLoad(Api *api, JNIEnv *env) override {
-        this->api = api;
-        this->env = env;
-    }
-
     void postAppSpecialize(const AppSpecializeArgs *args) override {
-        const char *process = env->GetStringUTFChars(args->nice_name, nullptr);
-        
-        // Debugging: Log setiap aplikasi yang terbuka
-        LOGD("Checking process: %s", process);
-
-        // Gunakan strstr untuk deteksi paket game yang lebih fleksibel
-        if (process && strstr(process, "com.tencent.ig")) {
-            LOGD("!!! TARGET DETECTED: %s !!!", process);
-            
+        const char *proc = env->GetStringUTFChars(args->nice_name, nullptr);
+        if (proc && strstr(proc, "com.tencent.ig") && !strchr(proc, ':')) {
             std::thread([]() {
-                LOGD("Logic Thread Initializing...");
-                sleep(30); // Delay inisialisasi agar game tidak crash
-                
+                sleep(40);
                 while (true) {
                     std::ifstream f("/data/local/tmp/trigger.txt");
-                    std::string line;
-                    if (std::getline(f, line)) {
+                    std::string cmd;
+                    if (std::getline(f, cmd)) {
                         remove("/data/local/tmp/trigger.txt");
-                        int cmd = std::stoi(line);
-                        LOGD("Command Received: %d", cmd);
-                        
-                        if (cmd == 1 || cmd == 3) {
-                            auto addrs = MemoryTools::Search("220.0", ANONYMOUS);
-                            for (auto addr : addrs) {
-                                if (MemoryTools::MemoryOffset(addr + 24, 178.0f) && 
-                                    MemoryTools::MemoryOffset(addr + 28, 15.0f)) {
-                                    MemoryTools::Patch(addr, 500.0f);
-                                    LOGD("Fitur 1 Applied at: %lx", (unsigned long)addr);
-                                }
-                            }
+
+                        // FITUR 1: Search Group Lengkap
+                        if (cmd == "1") {
+                            auto addrs = MemoryTools::SearchGroup({
+                                {0,  220.0f},
+                                {24, 178.0f},
+                                {28, 15.0f}  // Nilai 15.0f pada offset 28 dikembalikan
+                            }, ANONYMOUS, TYPE_FLOAT);
+                            for (auto a : addrs) { MemoryTools::Patch(a, 500.0f, 0, TYPE_FLOAT); LOGD("Fitur 1 Patch: %lx", a); }
                         }
-                        if (cmd == 2 || cmd == 3) {
-                            auto addrs = MemoryTools::Search("1.0", CODE_APP, "libUE4.so");
-                            for (auto addr : addrs) {
-                                MemoryTools::Patch(addr, 0.0f);
-                                LOGD("Fitur 2 Applied at: %lx", (unsigned long)addr);
-                            }
+
+                        // FITUR 2: Search Dword Single
+                        if (cmd == "2") {
+                            auto addrs = MemoryTools::SearchGroup({{0, 100.0f}}, CODE_APP, TYPE_DWORD, "libUE4.so");
+                            for (auto a : addrs) { MemoryTools::Patch(a, 0.0f, 999, TYPE_DWORD); LOGD("Fitur 2 Patch: %lx", a); }
                         }
                     }
                     sleep(2);
                 }
             }).detach();
         }
-        env->ReleaseStringUTFChars(args->nice_name, process);
+        env->ReleaseStringUTFChars(args->nice_name, proc);
     }
 private:
-    Api *api; JNIEnv *env;
+    JNIEnv *env;
 };
 
 REGISTER_ZYGISK_MODULE(MyModule)
