@@ -1,13 +1,17 @@
+// TAMBAHKAN INI DI BARIS PALING ATAS UNTUK MEMPERBAIKI ERROR dev_t DAN ino_t
+#include <sys/types.h> 
+
+// Baru diikuti oleh include yang lainnya
 #include <zygisk.hpp>
 #include <string.h>
 #include <fstream>
 #include <string>
 #include <android/log.h>
 
-// Log tag untuk mempermudah pengecekan lewat Logcat
 #define LOG_TAG "ZygiskBridge"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
+// ... sisa kode module.cpp di bawahnya tetap sama ...
 // Deklarasikan fungsi main milik main.cpp Anda agar bisa dipanggil di sini
 extern int main(int argc, char *argv[]);
 
