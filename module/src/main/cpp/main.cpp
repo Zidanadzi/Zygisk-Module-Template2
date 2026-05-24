@@ -89,7 +89,7 @@ public:
             }
             if (allMatch) {
                 MemoryPatch(addr, patchOffset, newValue);
-                LOGD("Patch sukses di: %lx", addr);
+                LOGD("Patch sukses di: %lx", (unsigned long)addr);
             }
         }
     }
@@ -127,8 +127,8 @@ public:
                                 MemoryTools::SetRange(RANGE_LIBUE4);
                                 for (auto addr : MemoryTools::MemorySearch("1.0", TYPE_FLOAT)) {
                                     MemoryTools::MemoryPatch(addr, 0, 0.0f);
+                                    LOGD("Black Sky diaktifkan pada alamat: %lx", (unsigned long)addr);
                                 }
-                                LOGD("Black Sky diaktifkan pada libUE4.so");
                                 break;
                         }
                     }
