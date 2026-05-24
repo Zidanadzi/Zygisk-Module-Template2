@@ -22,8 +22,8 @@ public:
             const char *package_name = env->GetStringUTFChars(args->nice_name, nullptr);
             
             if (package_name && strcmp(package_name, "com.tencent.ig") == 0) {
-                // Memberitahu Zygisk untuk menahan modul di memori aplikasi target
-                api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
+                // FIXED: Opsi dlclose dihapus total di sini.
+                // Modul dibiarkan menetap di memori game agar background thread tetap hidup aman.
             }
             
             if (package_name) {
