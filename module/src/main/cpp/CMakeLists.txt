@@ -29,8 +29,13 @@ set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${LINKER_FLAGS}")
 
 add_library(${MODULE_NAME} SHARED
         main.cpp)
-        
-target_link_libraries(${MODULE_NAME} log)
+
+target_link_libraries(${MODULE_NAME} 
+android
+log
+
+atomic
+)
 
 if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_custom_command(TARGET ${MODULE_NAME} POST_BUILD
