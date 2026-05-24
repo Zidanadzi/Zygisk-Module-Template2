@@ -18,7 +18,7 @@ extern int isapkrunning(char* pkgName);
 extern void initXMemoryTools(char* pkgName, char* rootMode);
 
 // Pustaka fungsi pencarian memori global Anda
-extern int SetSearchRange(int type; 
+extern int SetSearchRange(int type);
 extern void MemorySearch(char* value, int TYPE);
 extern void MemoryOffset(char *value, long int offset, int type);
 extern void MemoryWrite(char *value, long int offset, int type);
