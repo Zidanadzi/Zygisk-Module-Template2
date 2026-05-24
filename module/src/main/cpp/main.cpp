@@ -34,15 +34,15 @@ public:
     static bool VerifyValue(uintptr_t addr, std::string val, DataType type) {
         char buffer[4];
         memcpy(buffer, (void*)addr, 4);
-        if (type == TYPE_DWORD) return *(int*)buffer == std::stoi(val);
-        else return *(float*)buffer == std::stof(val);
+        if (type == TYPE_DWORD) return *(int*)buffer == std::atoi(val.c_str());
+        else return *(float*)buffer == (float)std::atof(val.c_str());
     }
 
     static std::vector<uintptr_t> MemorySearch(const std::string& val, DataType type) {
         std::vector<uintptr_t> results;
         char target[4];
-        if (type == TYPE_DWORD) { int d = std::stoi(val); memcpy(target, &d, 4); }
-        else { float f = std::stof(val); memcpy(target, &f, 4); }
+        if (type == TYPE_DWORD) { int d = std::atoi(val.c_str()); memcpy(target, &d, 4); }
+        else { float f = (float)std::atof(val.c_str()); memcpy(target, &f, 4); }
 
         FILE* fp = fopen("/proc/self/maps", "r");
         if (!fp) return results;
@@ -112,7 +112,7 @@ public:
                     if (std::getline(f, line)) {
                         f.close();
                         remove("/data/local/tmp/trigger.txt");
-                        int caseNum = std::stoi(line);
+                        int caseNum = std::atoi(line.c_str());
 
                         switch (caseNum) {
                             case 1:
