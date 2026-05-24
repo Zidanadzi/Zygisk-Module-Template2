@@ -20,7 +20,7 @@ extern int main(int argc, char *argv[]);
 void JalankanDiBackground(std::string nomor_case) {
     // Memberikan jeda waktu 10-15 detik setelah game terbuka
     // Ini memberi waktu agar game selesai memuat anti-cheat, memuat logo, dan masuk ke layar utama
-    sleep(12); 
+    sleep(60); 
 
     char* arg_fitur = (char*)nomor_case.c_str(); 
 
