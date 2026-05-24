@@ -17,14 +17,14 @@ struct little_map {
 
 int main(int argc, char *argv[]) 
 {
-    // Memastikan argumen argv tersedia sebelum diproses oleh atoi
-    if (argc < 2 || argv == nullptr) {
+    // Memastikan argumen argv dan isi argumen pertamanya tersedia
+    if (argc < 2 || argv == nullptr || argv[1] == nullptr) {
         LOGI("Error: Argumen fitur kosong.");
         return -1;
     }
 
-    // Mengambil pilihan fitur dari parameter Zygisk
-    int Fitur = atoi(argv); 
+    // PERBAIKAN MUTLAK: Tambahkan [1] setelah argv agar bertipe const char*
+    int Fitur = atoi(argv[1]); 
 
     {
         char pkg[100] = {0};
