@@ -22,9 +22,9 @@ struct little_map {
     std::int64_t value;
 };
 
-// Deklarasi fungsi dari MemoryTools Anda agar compiler tidak error
-extern int isapkrunning(const char* pkgName);
-extern void initXMemoryTools(const char* pkgName, const char* rootMode);
+// HAPUS KATA 'const' AGAR SAMA PERSIS DENGAN MEMORYTOOLS ANDA
+extern int isapkrunning(char* pkgName);
+extern void initXMemoryTools(char* pkgName, char* rootMode);
 
 int main(int argc, char *argv[]) 
 {
@@ -38,31 +38,25 @@ int main(int argc, char *argv[])
     int Fitur = atoi(argv[1]); 
 
     {
-        char pkg[100] = {0};
-        if (isapkrunning("com.tencent.ig") == 1)
+                char pkg[100] = {0};
+        // Tambahkan (char*) di depan setiap nama paket aplikasi
+        if (isapkrunning((char*)"com.tencent.ig") == 1)
         {
             sprintf(pkg, "com.tencent.ig");
         }
-        else if (isapkrunning("com.vng.pubgmobile") == 1)
+        else if (isapkrunning((char*)"com.vng.pubgmobile") == 1)
         {
             sprintf(pkg, "com.vng.pubgmobile");
         }
-        else if (isapkrunning("com.pubg.krmobile") == 1)
+        else if (isapkrunning((char*)"com.pubg.krmobile") == 1)
         {
             sprintf(pkg, "com.pubg.krmobile");
         }
-        else if (isapkrunning("com.rekoo.pubgm") == 1)
+        else if (isapkrunning((char*)"com.rekoo.pubgm") == 1)
         {
             sprintf(pkg, "com.rekoo.pubgm");
         }
 
-        char getRoot[100] = {0};
-        if (getuid() == 0) {
-            sprintf(getRoot, "MODE_ROOT");
-        }
-        else {
-            sprintf(getRoot, "MODE_NO_ROOT");
-        }
 
         // Jalankan inisialisasi bawaan memorytools Anda
         initXMemoryTools(pkg, getRoot);
