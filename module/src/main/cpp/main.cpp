@@ -1,11 +1,12 @@
 #include <unistd.h>
-#include <fcntl.h>
 #include <android/log.h>
-#include <sys/mman.h>
+#include <thread>
+#include <fstream>
 #include <string>
 #include <vector>
-#include <fstream>
-#include <thread>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <cstring>
 #include "zygisk.hpp"
 
 using namespace zygisk;
@@ -45,9 +46,13 @@ public:
             unsigned int s, e;
             char perms[5], path[256];
             sscanf(line, "%x-%x %4s %*x %*s %*s %s", &s, &e, perms, path);
+            
+            // Hanya scan memori yang bisa ditulis (rw)
+            if (!strstr(perms, "w")) continue;
+
             bool match = (range == ALL) || 
                          (range == CODE_APP && lib && strstr(path, lib)) ||
-                         (range == ANONYMOUS && strlen(path) == 0 && strstr(perms, "rw"));
+                         (range == ANONYMOUS && strlen(path) == 0);
             if (match) {
                 for (uintptr_t a = (uintptr_t)s; a < (uintptr_t)e - 4; a += 4) {
                     float buf;
@@ -67,20 +72,23 @@ public:
         this->env = env;
     }
 
-    void preAppSpecialize(AppSpecializeArgs *args) override {
+    void postAppSpecialize(const AppSpecializeArgs *args) override {
         const char *process = env->GetStringUTFChars(args->nice_name, nullptr);
         
         if (process && strstr(process, "com.tencent.ig")) {
-            LOGD("Target Process Detected: %s", process);
+            LOGD("Game Injected Successfully: %s", process);
             
             std::thread([]() {
-                sleep(20); // Safety delay
+                sleep(45); // Delay panjang agar game benar-benar siap
+                LOGD("Logic Thread Active");
+                
                 while (true) {
                     std::ifstream f("/data/local/tmp/trigger.txt");
                     std::string line;
                     if (std::getline(f, line)) {
                         remove("/data/local/tmp/trigger.txt");
                         int cmd = std::stoi(line);
+                        LOGD("Command Received: %d", cmd);
                         
                         if (cmd == 1 || cmd == 3) {
                             auto addrs = MemoryTools::Search("220.0", ANONYMOUS);
@@ -88,20 +96,19 @@ public:
                                 if (MemoryTools::MemoryOffset(addr + 24, 178.0f) && 
                                     MemoryTools::MemoryOffset(addr + 28, 15.0f)) {
                                     MemoryTools::Patch(addr, 500.0f);
-                                    LOGD("Fitur 1 Patch Success: %lx", (unsigned long)addr);
+                                    LOGD("Fitur 1 Success: %lx", (unsigned long)addr);
                                 }
                             }
                         }
-
                         if (cmd == 2 || cmd == 3) {
                             auto addrs = MemoryTools::Search("1.0", CODE_APP, "libUE4.so");
                             for (auto addr : addrs) {
                                 MemoryTools::Patch(addr, 0.0f);
-                                LOGD("Fitur 2 Patch Success: %lx", (unsigned long)addr);
+                                LOGD("Fitur 2 Success: %lx", (unsigned long)addr);
                             }
                         }
                     }
-                    sleep(2);
+                    sleep(5); // Kurangi polling rate untuk stabilitas
                 }
             }).detach();
         }
