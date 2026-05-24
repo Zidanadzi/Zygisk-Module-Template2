@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <android/log.h>
-#include "MemoryTools.h" // Otomatis memuat file MemoryTools eksternal Anda
+#include "MemoryTools.h" // Memuat file MemoryTools eksternal Anda
 
 #define LOG_TAG "MainCPP"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -26,16 +26,17 @@ extern void MemoryWrite(char *value, long int offset, int type);
 int main(int argc, char *argv[]) 
 {
     // Memastikan argumen penentu case dari Zygisk telah mendarat dengan aman
-    if (argc < 2 || argv == nullptr || argv == nullptr) {
+    if (argc < 2 || argv == nullptr || argv[1] == nullptr) {
         LOGI("Error: Argumen fitur kosong.");
         return -1;
     }
 
-    // Mengambil pilihan fitur dari parameter Zygisk menggunakan indeks array yang sah
-    int Fitur = atoi(argv); 
+    // PERBAIKAN 1: Menambahkan indeks [1] agar lolos dari error atoi
+    int Fitur = atoi(argv[1]); 
 
     {
-        char pkg = {0}; 
+        // PERBAIKAN 2: Mengubah menjadi array teks char pkg[100] agar valid untuk fgets dan sprintf
+        char pkg[100] = {0}; 
         
         // Membaca file cmdline internal untuk mendeteksi nama package secara otomatis (Universal)
         FILE* f = fopen("/proc/self/cmdline", "r");
@@ -47,13 +48,14 @@ int main(int argc, char *argv[])
             sprintf(pkg, "com.tencent.ig"); 
         }
 
-        // AMAN DARI CRASH: Memaksa inisialisasi berjalan dengan akses istimewa di dalam Zygisk
-        char getRoot = {0};
+        // PERBAIKAN 3: Mengubah menjadi array teks char getRoot[100] agar aman
+        char getRoot[100] = {0};
         sprintf(getRoot, "MODE_ROOT");
 
-        // Menjalankan inisialisasi tools memori bawaan Anda
+        // Menjalankan inisialisasi tools memori Anda secara aman
         ::initXMemoryTools(pkg, getRoot);
         
+        // Memaksa pengiriman string agar lolos dari audit format-security NDK
         LOGI("Zygisk sukses mengunci Game aktif: %s, Mode: %s, Menjalankan Fitur: %d", (const char*)pkg, (const char*)getRoot, Fitur);
 
         // Evaluasi Menu Multi-Case Anda
@@ -61,7 +63,7 @@ int main(int argc, char *argv[])
         {
             case 1:
                 LOGI("Menjalankan Fitur LOGIKA CASE 1");
-                ::SetSearchRange(1); // Mengembalikan fungsi pembatas range memori Anda
+                ::SetSearchRange(1); // Sesuaikan angka 1 dengan tipe range Anda (misal: ALL atau ANON)
                 ::MemorySearch((char*)"220", TYPE_FLOAT);
                 ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
                 ::MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
@@ -80,8 +82,9 @@ int main(int argc, char *argv[])
             default:
                 LOGI("Case kosong atau default aktif, membiarkan lobi tetap normal.");
                 break;
-        } 
-    } 
+        } // Batas penutup Switch-Case
+        
+    } // Batas penutup blok kurung kurawal pencarian nama paket
 
     return 0;
-}
+} // Batas penutup fungsi int main()
