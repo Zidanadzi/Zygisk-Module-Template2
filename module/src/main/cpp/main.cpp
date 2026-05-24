@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
         {
             case 1:
                 LOGI("Menjalankan Fitur LOGIKA CASE 1");
-                ::SetRange(ALL); // Sesuaikan angka 1 dengan tipe range Anda (misal: ALL atau ANON)
+                ::SetSearchRange(ALL); // Sesuaikan angka 1 dengan tipe range Anda (misal: ALL atau ANON)
                 ::MemorySearch((char*)"220", TYPE_FLOAT);
                 ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
                 ::MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
                 
             case 2:
                 LOGI("Menjalankan Fitur LOGIKA CASE 2");
-                ::SetRange(ALL);
+                ::SetSearchRange(ALL);
                 ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
                 ::MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
                 ::MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
