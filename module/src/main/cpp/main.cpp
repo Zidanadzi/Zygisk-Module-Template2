@@ -64,27 +64,19 @@ int main(int argc, char *argv[])
         switch (Fitur)
         {
         case 1:
-            LOGI("Menjalankan Fitur LOGIKA CASE 1");
-            SetSearchRange(ALL); //wide
-            MemorySearch("220", TYPE_FLOAT);
-            MemoryOffset("178", 0x18, TYPE_FLOAT);
-            MemoryOffset("15", 0x1C, TYPE_FLOAT);            
-            MemoryWrite("600", 0, TYPE_FLOAT);
-            ClearResults();            
-           
-            SetSearchRange(ALL); //black sky
-            MemorySearch("0.05000000075", TYPE_FLOAT);
-            MemoryOffset("3.4028235e38", -0x4, TYPE_FLOAT);
-            MemoryOffset("8.04061356e-15", 0x48, TYPE_FLOAT);
-            MemoryWrite("200", 0, TYPE_FLOAT);
-            ClearResults();      
-            break;
-            
+            MemorySearch((char*)"220", TYPE_FLOAT);
+            MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
+            MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
+            MemoryWrite((char*)"600", 0, TYPE_FLOAT);
+    break;
+
         case 2:
-            LOGI("Menjalankan Fitur LOGIKA CASE 2");
-            // ──> MASUKKAN LOGIKA MANIPULASI MEMORI CASE 2 ANDA DI SINI <──
-            break;
-            
+            MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
+            MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
+            MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
+            MemoryWrite((char*)"200", 0, TYPE_FLOAT);
+    break;
+
         case 3:
             LOGI("Menjalankan Fitur LOGIKA CASE 3");
             // ──> MASUKKAN LOGIKA MANIPULASI MEMORI CASE 3 ANDA DI SINI <──
