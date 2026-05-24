@@ -3,10 +3,19 @@
 #include <string.h>
 #include <unistd.h>
 #include <android/log.h>
-#include "MemoryTools.h" // Otomatis memuat file MemoryTools eksternal Anda
+
+// ──> SISIPKAN 4 BARIS INI TEPAT DI ATAS INClUDE MEMORYTOOLS <──
+#ifdef pread64
+#undef pread64
+extern "C" ssize_t pread64(int fd, void* buf, size_t count, off64_t offset);
+#endif
+
+#include "MemoryTools.h" // File MemoryTools Anda dipanggil di sini
 
 #define LOG_TAG "MainCPP"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+
+// ... sisa kode main.cpp ke bawahnya tetap sama seutuhnya ...
 
 struct little_map {
     std::uintptr_t address;
