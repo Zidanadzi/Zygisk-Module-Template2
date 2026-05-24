@@ -1,7 +1,8 @@
 #include <zygisk.hpp>
 #include <string.h>
+#include <fstream>
+#include <string>
 
-// Baris ini memberi tahu Zygisk bahwa ada fungsi 'main' di file main.cpp Anda
 extern int main(int argc, char *argv[]);
 
 class PerantaraZygisk : public zygisk::ModuleBase {
@@ -11,28 +12,41 @@ public:
         this->env = env;
     }
 
-    // Fungsi ini otomatis berjalan setiap kali ada aplikasi Android yang dibuka
     void postAppSpecialize(const AppSpecializeArgs *args) override {
-        
-        // Zygisk secara otomatis mengintip nama aplikasi yang sedang dibuka
         const char *processName = env->GetStringUTFChars(args->nice_name, nullptr);
         
         if (processName) {
-            // Karena main.cpp Anda butuh input 'argv[1]', kita buatkan isinya di sini.
-            // Angka "1" di bawah ini adalah nilai untuk 'Fitur = atoi(argv[1])' di kode Anda.
-            char* arg_fitur = (char*)"1"; 
+            // Jalur file teks konfigurasi Anda
+            // GANTI "id_modul_anda" sesuai folder modul Magisk Anda
+            std::string path_file = "/data/adb/modules/id_modul_anda/pilihan.txt";
+            
+            // JIKA KOSONG / TIDAK ADA: Otomatis diisi "1" agar menjalankan Case 1
+            std::string nomor_case = "1"; 
+            std::ifstream file_konfig(path_file);
+            
+            if (file_konfig.is_open()) {
+                std::string teks_bacaan;
+                std::getline(file_konfig, teks_bacaan);
+                file_konfig.close();
+                
+                // Jika file ada tapi isinya tidak kosong, gunakan isi file tersebut
+                if (!teks_bacaan.empty()) {
+                    nomor_case = teks_bacaan;
+                }
+            }
 
-            // Kita susun argumennya agar bisa dibaca oleh main.cpp Anda
+            // Kirim string angka ke argv di main.cpp
+            char* arg_fitur = (char*)nomor_case.c_str(); 
+
             char* susunan_argv[] = {
-                (char*)"modul_zygisk", // argv[0] (nama program, bebas)
-                arg_fitur,             // argv[1] (nomor fitur yang dibaca atoi)
+                (char*)"modul_zygisk",
+                arg_fitur,             
                 nullptr
             };
             
-            int jumlah_argc = 2; // Jumlah argumen yang dikirim
+            int jumlah_argc = 2;
             
-            // SEKARANG KITA PANGGIL KODE ANDA!
-            // Zygisk langsung melompat dan menjalankan fungsi main(argc, argv) di main.cpp Anda
+            // Jalankan kode utama main.cpp Anda
             main(jumlah_argc, susunan_argv);
         }
         
