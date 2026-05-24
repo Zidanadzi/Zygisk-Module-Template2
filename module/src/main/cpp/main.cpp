@@ -26,7 +26,6 @@ public:
         mprotect((void*)page, 0x1000, PROT_READ | PROT_EXEC);
     }
 
-    // Fungsi Search Group dengan offset negatif sesuai permintaan Anda
     static std::vector<uintptr_t> SearchGroup(const std::vector<std::pair<int, int>>& group, Range range) {
         std::vector<uintptr_t> results;
         char line[256]; FILE* fp = fopen("/proc/self/maps", "r");
@@ -36,7 +35,6 @@ public:
             unsigned int s, e; char p[5];
             sscanf(line, "%x-%x %4s", &s, &e, p);
             if (strstr(p, "w")) {
-                // Scan di area memory
                 for (uintptr_t a = (uintptr_t)s; a < (uintptr_t)e - 32; a += 4) {
                     bool match = true;
                     for (auto& item : group) {
@@ -56,18 +54,15 @@ public:
     void postAppSpecialize(const AppSpecializeArgs *args) override {
         const char *proc = env->GetStringUTFChars(args->nice_name, nullptr);
         
-        // Filter proses PUBG Mobile
         if (proc && strstr(proc, "com.tencent.ig") && !strchr(proc, ':')) {
             std::thread([]() {
-                sleep(40); // Tunggu lobby
+                sleep(40);
                 while (true) {
                     std::ifstream f("/data/local/tmp/trigger.txt");
                     std::string cmd;
-                    if (std::getline(f, cmd) && cmd == "3") { // Trigger Command 3
+                    if (std::getline(f, cmd) && cmd == "3") {
                         remove("/data/local/tmp/trigger.txt");
 
-                        // Konversi logika script lama Anda ke SearchGroup
-                        // Script Anda: 8200 (0), 8204 (-8), 8199 (-16), 8196 (-24)
                         auto addrs = MemoryTools::SearchGroup({
                             {0,    8200},
                             {-8,   8204},
@@ -77,7 +72,8 @@ public:
 
                         for (auto a : addrs) {
                             MemoryTools::Patch(a, 6, TYPE_DWORD);
-                            LOGD("PUBG Value Patched at: %lx", a);
+                            // Menggunakan casting (unsigned long) untuk menghindari error kompilasi
+                            LOGD("PUBG Value Patched at: %lx", (unsigned long)a);
                         }
                     }
                     sleep(2);
