@@ -1,55 +1,85 @@
-#pragma once
-#include <vector>
+#include <jni.h>
+#include <string>
+#include <thread>
+#include <chrono>
 #include <fstream>
-#include <cmath>
-#include <sys/mman.h>
-#include <cinttypes> // Mengatasi eror konversi format data sscanf
+#include <android/log.h>
+#include "zygisk.hpp"
+#include "memorytools.h" 
 
-namespace MemoryTools {
-    inline std::vector<std::pair<uintptr_t, uintptr_t>> active_ranges;
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "ZygiskMT", __VA_ARGS__)
 
-    // 1. SET RANGE
-    inline void SetRange(const std::string& range_type) {
-        active_ranges.clear();
-        std::ifstream maps("/proc/self/maps");
-        std::string line;
-        while (std::getline(maps, line)) {
-            if (line.find("rw") != std::string::npos) {
-                if (range_type == "ALL" || line.find(range_type) != std::string::npos || 
-                   (range_type == "ANONYMOUS" && line.find("/") == std::string::npos)) {
-                    uintptr_t start, end;
+class PerfectModule : public zygisk::ModuleBase {
+public:
+    void onLoad(zygisk::Api *api, JNIEnv *env) override {
+        this->api = api;
+        this->env = env;
+    }
+
+    void preAppSpecialize(zygisk::AppSpecializeArgs *args) override {
+        if (args->nice_name) {
+            const char *package_name = env->GetStringUTFChars(args->nice_name, nullptr);
+            
+            if (package_name && strcmp(package_name, "com.tencent.ig") == 0) {
+                // FIX: Opsi dlclose di sini TELAH DIHAPUS.
+                // Modul tidak boleh di-dlclose jika menggunakan background thread (while-loop).
+                // Membiarkan blok ini kosong membuat modul menetap dengan aman di memori game.
+            }
+            
+            if (package_name) {
+                env->ReleaseStringUTFChars(args->nice_name, package_name);
+            }
+        }
+    }
+
+    void postAppSpecialize(const zygisk::AppSpecializeArgs *args) override {
+        std::thread([]() {
+            LOGI("Zygisk Modul Siap. Menunggu perintah dari menu interaktif .sh...");
+
+            while (true) {
+                std::this_thread::sleep_for(std::chrono::seconds(1)); 
+
+                std::ifstream trigger_file("/data/local/tmp/run_cheat");
+                
+                if (trigger_file.good()) {
+                    std::string kode_menu;
+                    std::getline(trigger_file, kode_menu);
+                    trigger_file.close();
                     
-                    // Menggunakan SCNxPTR agar lolos kompilasi di arsitektur 32-bit & 64-bit
-                    if (sscanf(line.c_str(), "%" SCNxPTR "-%" SCNxPTR, &start, &end) == 2) {
-                        active_ranges.push_back({start, end});
+                    std::remove("/data/local/tmp/run_cheat");
+
+                    MemoryTools::SetRange("ALL");
+
+                    if (kode_menu == "1") {
+                        LOGI("=== Menerima Perintah: AKTIFKAN FITUR ===");
+                        auto hasil_search = MemoryTools::Search(220.0f);
+                        for (uintptr_t alamat : hasil_search) {
+                            if (std::fabs(MemoryTools::Offset(alamat, 24) - 178.0f) < 0.001f && 
+                                std::fabs(MemoryTools::Offset(alamat, 28) - 15.0f) < 0.001f) {
+                                MemoryTools::Write(alamat, 500.0f);
+                            }
+                        }
+                        LOGI("=== Fitur Sukses Diaktifkan ===");
+
+                    } else if (kode_menu == "2") {
+                        LOGI("=== Menerima Perintah: NONAKTIFKAN FITUR ===");
+                        auto hasil_search = MemoryTools::Search(500.0f);
+                        for (uintptr_t alamat : hasil_search) {
+                            if (std::fabs(MemoryTools::Offset(alamat, 24) - 178.0f) < 0.001f && 
+                                \std::fabs(MemoryTools::Offset(alamat, 28) - 15.0f) < 0.001f) {
+                                MemoryTools::Write(alamat, 220.0f); 
+                            }
+                        }
+                        LOGI("=== Fitur Sukses Dinonaktifkan ===");
                     }
                 }
             }
-        }
+        }).detach();
     }
 
-    // 2. SEARCH
-    inline std::vector<uintptr_t> Search(float value) {
-        std::vector<uintptr_t> results;
-        for (const auto& range : active_ranges) {
-            for (uintptr_t addr = range.first; addr < range.second - sizeof(float); addr += 4) {
-                if (std::fabs(*reinterpret_cast<float*>(addr) - value) < 0.001f) results.push_back(addr);
-            }
-        }
-        return results;
-    }
+private:
+    zygisk::Api *api;
+    JNIEnv *env;
+};
 
-    // 3. OFFSET
-    inline float Offset(uintptr_t base_address, long offset_bytes) {
-        if (base_address == 0) return 0.0f;
-        return *reinterpret_cast<float*>(base_address + offset_bytes);
-    }
-
-    // 4. WRITE
-    inline void Write(uintptr_t address, float new_value) {
-        if (address == 0) return;
-        uintptr_t page_start = address & ~(PAGE_SIZE - 1);
-        mprotect(reinterpret_cast<void*>(page_start), PAGE_SIZE, PROT_READ | PROT_WRITE);
-        *reinterpret_cast<float*>(address) = new_value;
-    }
-}
+REGISTER_ZYGISK_MODULE(PerfectModule)
