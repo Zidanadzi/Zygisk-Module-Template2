@@ -8,7 +8,6 @@
 #include <sys/mman.h>
 #include <cstring>
 #include <fstream>
-#include <initializer_list>
 
 #include "zygisk.hpp"
 
@@ -25,16 +24,14 @@ public:
     static int mem_fd;
 
     static void Init() { if(mem_fd < 0) mem_fd = open("/proc/self/mem", O_RDONLY); }
-    
-    // Pastikan fungsi ini dideklarasikan dengan benar
     static void SetRange(MemoryRange range) { currentRange = range; }
 
-    static bool VerifyValue(uintptr_t addr, std::string val, DataType type) {
-        if (addr == 0) return false;
-        char buffer[4];
-        if (pread(mem_fd, buffer, 4, addr) != 4) return false;
-        if (type == TYPE_DWORD) return *(int*)buffer == std::atoi(val.c_str());
-        else return *(float*)buffer == (float)std::atof(val.c_str());
+    // Membandingkan representasi bit mentah float
+    static bool VerifyValueStrict(uintptr_t addr, float val) {
+        uint32_t mem_bits, target_bits;
+        if (pread(mem_fd, &mem_bits, 4, addr) != 4) return false;
+        memcpy(&target_bits, &val, 4);
+        return mem_bits == target_bits;
     }
 
     static std::vector<uintptr_t> MemorySearch(const std::string& val, DataType type) {
@@ -50,12 +47,11 @@ public:
         while (fgets(line, sizeof(line), fp)) {
             unsigned int s, e;
             char perm[8], path[256];
-            memset(path, 0, sizeof(path));
-            if (sscanf(line, "%x-%x %7s %*x %*s %*d %255s", &s, &e, perm, path) < 3) continue;
+            sscanf(line, "%x-%x %7s %*x %*s %*d %255s", &s, &e, perm, path);
             
             bool shouldScan = false;
-            if (currentRange == RANGE_ALL) shouldScan = (perm[0] == 'r' && perm[1] == 'w');
-            else if (currentRange == RANGE_ANONYMOUS) shouldScan = (strlen(path) == 0 && perm[0] == 'r' && perm[1] == 'w');
+            if (currentRange == RANGE_ALL) shouldScan = (perm[0] == 'r');
+            else if (currentRange == RANGE_ANONYMOUS) shouldScan = (strlen(path) == 0 && perm[0] == 'r');
             else if (currentRange == RANGE_LIBUE4) shouldScan = (strstr(path, "libUE4.so") != nullptr && perm[0] == 'r');
 
             if (shouldScan) {
@@ -79,31 +75,17 @@ public:
     }
 };
 
-// Inisialisasi variabel statis di luar class
 MemoryRange MemoryTools::currentRange = RANGE_ANONYMOUS;
 int MemoryTools::mem_fd = -1;
 
 class MyModule : public ModuleBase {
 public:
-    void onLoad(Api *api, JNIEnv *env) override { 
-        this->api = api; 
-        this->env = env; 
-        MemoryTools::Init(); 
-    }
+    void onLoad(Api *api, JNIEnv *env) override { this->api = api; this->env = env; MemoryTools::Init(); }
 
     void postAppSpecialize(const AppSpecializeArgs *args) override {
         const char *process = env->GetStringUTFChars(args->nice_name, nullptr);
         if (strcmp(process, "com.tencent.ig") == 0) {
             std::thread([]() {
-                while (true) {
-                    std::ifstream maps("/proc/self/maps");
-                    std::string line;
-                    bool ready = false;
-                    while(std::getline(maps, line)) if(line.find("libUE4.so") != std::string::npos) ready = true;
-                    if(ready) break;
-                    sleep(2);
-                }
-                
                 while (true) {
                     std::ifstream f("/data/local/tmp/trigger.txt");
                     std::string line;
@@ -116,8 +98,8 @@ public:
                             MemoryTools::SetRange(RANGE_ALL);
                             auto addrs = MemoryTools::MemorySearch("220.0", TYPE_FLOAT);
                             for (auto addr : addrs) {
-                                if (MemoryTools::VerifyValue(addr + 24, "178.0", TYPE_FLOAT) && 
-                                    MemoryTools::VerifyValue(addr + 28, "15.0", TYPE_FLOAT)) {
+                                if (MemoryTools::VerifyValueStrict(addr + 24, 178.0f) && 
+                                    MemoryTools::VerifyValueStrict(addr + 28, 15.0f)) {
                                     MemoryTools::MemoryPatchFloat(addr, 500.0f);
                                     LOGD("Fitur 1 Applied.");
                                 }
