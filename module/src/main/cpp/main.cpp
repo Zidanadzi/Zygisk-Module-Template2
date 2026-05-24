@@ -47,7 +47,6 @@ public:
             char perms[5], path[256];
             sscanf(line, "%x-%x %4s %*x %*s %*s %s", &s, &e, perms, path);
             
-            // Hanya scan memori yang bisa ditulis (rw)
             if (!strstr(perms, "w")) continue;
 
             bool match = (range == ALL) || 
@@ -75,12 +74,16 @@ public:
     void postAppSpecialize(const AppSpecializeArgs *args) override {
         const char *process = env->GetStringUTFChars(args->nice_name, nullptr);
         
+        // Debugging: Log setiap aplikasi yang terbuka
+        LOGD("Checking process: %s", process);
+
+        // Gunakan strstr untuk deteksi paket game yang lebih fleksibel
         if (process && strstr(process, "com.tencent.ig")) {
-            LOGD("Game Injected Successfully: %s", process);
+            LOGD("!!! TARGET DETECTED: %s !!!", process);
             
             std::thread([]() {
-                sleep(45); // Delay panjang agar game benar-benar siap
-                LOGD("Logic Thread Active");
+                LOGD("Logic Thread Initializing...");
+                sleep(30); // Delay inisialisasi agar game tidak crash
                 
                 while (true) {
                     std::ifstream f("/data/local/tmp/trigger.txt");
@@ -96,7 +99,7 @@ public:
                                 if (MemoryTools::MemoryOffset(addr + 24, 178.0f) && 
                                     MemoryTools::MemoryOffset(addr + 28, 15.0f)) {
                                     MemoryTools::Patch(addr, 500.0f);
-                                    LOGD("Fitur 1 Success: %lx", (unsigned long)addr);
+                                    LOGD("Fitur 1 Applied at: %lx", (unsigned long)addr);
                                 }
                             }
                         }
@@ -104,11 +107,11 @@ public:
                             auto addrs = MemoryTools::Search("1.0", CODE_APP, "libUE4.so");
                             for (auto addr : addrs) {
                                 MemoryTools::Patch(addr, 0.0f);
-                                LOGD("Fitur 2 Success: %lx", (unsigned long)addr);
+                                LOGD("Fitur 2 Applied at: %lx", (unsigned long)addr);
                             }
                         }
                     }
-                    sleep(5); // Kurangi polling rate untuk stabilitas
+                    sleep(2);
                 }
             }).detach();
         }
