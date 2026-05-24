@@ -18,10 +18,11 @@ public:
 
     void preAppSpecialize(zygisk::AppSpecializeArgs *args) override {
         if (args->nice_name) {
+            // Mengonversi jstring objek ke string teks murni C++
             const char *package_name = env->GetStringUTFChars(args->nice_name, nullptr);
             
             if (package_name && strcmp(package_name, "com.tencent.ig") == 0) {
-                // FIX: Mengubah sesuai nama opsi yang dideklarasikan di zygisk.hpp Anda
+                // Memberitahu Zygisk untuk menahan modul di memori aplikasi target
                 api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
             }
             
