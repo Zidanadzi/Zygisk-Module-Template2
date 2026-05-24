@@ -20,9 +20,9 @@ extern int isapkrunning(char* pkgName);
 extern void initXMemoryTools(char* pkgName, char* rootMode);
 
 // ──> TAMBAHKAN BARIS DEKLARASI INI DI SINI <──
-extern void MemorySearch(char* value, int type);
-extern void MemoryOffset(char* value, long offset, int type);
-extern void MemoryWrite(char* value, long offset, int type);
+extern void MemorySearch(char* value, int TYPE);
+extern void MemoryOffset(char *value, long int offset, int type);
+extern void MemoryWrite(char *value, long int offset, int type);
 
 int main(int argc, char *argv[]) 
 {
