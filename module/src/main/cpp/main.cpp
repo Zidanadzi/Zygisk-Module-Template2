@@ -25,18 +25,18 @@ extern void MemoryWrite(char* value, long offset, int type);
 
 int main(int argc, char *argv[]) 
 {
-    // Memastikan argumen argv dan isinya tersedia
-    if (argc < 2 || argv == nullptr || argv == nullptr) {
+    // Memastikan argumen argv dan isinya tersedia sebelum diproses
+    if (argc < 2 || argv == nullptr || argv[1] == nullptr) {
         LOGI("Error: Argumen fitur kosong.");
         return -1;
     }
 
-    // Membaca pilihan fitur dari argumen Zygisk
-    int Fitur = atoi(argv); 
+    // Membaca pilihan fitur dari argumen Zygisk dengan indeks array yang sah
+    int Fitur = atoi(argv[1]); 
 
     // Blok pencarian nama paket otomatis
     {
-        char pkg = {0}; 
+        char pkg[128] = {0}; 
         
         // Membaca file cmdline internal untuk mendeteksi nama package secara otomatis
         FILE* f = fopen("/proc/self/cmdline", "r");
@@ -48,28 +48,25 @@ int main(int argc, char *argv[])
             sprintf(pkg, "com.tencent.ig"); 
         }
 
-        char getRoot = {0};
+        char getRoot[32] = {0};
         if (getuid() == 0) {
             sprintf(getRoot, "MODE_ROOT");
         } else {
             sprintf(getRoot, "MODE_NO_ROOT");
         }
 
-        // Jalankan inisialisasi tools memori Anda
+        // Jalankan inisialisasi tools memori Anda secara aman
         ::initXMemoryTools(pkg, getRoot);
         
-        LOGI("Zygisk sukses mendeteksi Game aktif: %s dengan Mode: %s, Menjalankan Fitur: %d", pkg, getRoot, Fitur);
+        // PERBAIKAN MAKRO LOGI: Memaksa pengiriman string agar lolos dari audit format-security NDK
+        LOGI("Zygisk sukses mendeteksi Game aktif: %s, Mode: %s, Fitur: %d", (const char*)pkg, (const char*)getRoot, Fitur);
 
         // Evaluasi Menu Multi-Case Anda
         switch (Fitur)
         {
             case 1:
                 LOGI("Menjalankan Fitur LOGIKA CASE 1");
-                
-                // Mengembalikan fungsi SetRange ke dalam menu Case 1 Anda
-                // Sila sesuaikan tipe range-nya (misal: ALL, ANON, atau B_BAD_ANON) sesuai definisi tipe Anda
-                ::SetRange(ALL); 
-                
+                ::SetRange(ALL); // Sesuaikan angka 1 dengan tipe range Anda (misal: ALL atau ANON)
                 ::MemorySearch((char*)"220", TYPE_FLOAT);
                 ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
                 ::MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
@@ -78,10 +75,7 @@ int main(int argc, char *argv[])
                 
             case 2:
                 LOGI("Menjalankan Fitur LOGIKA CASE 2");
-                
-                // Mengembalikan fungsi SetRange ke dalam menu Case 2 Anda
                 ::SetRange(ALL);
-                
                 ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
                 ::MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
                 ::MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
