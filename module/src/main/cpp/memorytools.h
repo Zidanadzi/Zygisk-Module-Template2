@@ -3,6 +3,7 @@
 #include <fstream>
 #include <cmath>
 #include <sys/mman.h>
+#include <cinttypes> // Mengatasi eror konversi format data sscanf
 
 namespace MemoryTools {
     inline std::vector<std::pair<uintptr_t, uintptr_t>> active_ranges;
@@ -17,7 +18,11 @@ namespace MemoryTools {
                 if (range_type == "ALL" || line.find(range_type) != std::string::npos || 
                    (range_type == "ANONYMOUS" && line.find("/") == std::string::npos)) {
                     uintptr_t start, end;
-                    if (sscanf(line.c_str(), "%lx-%lx", &start, &end) == 2) active_ranges.push_back({start, end});
+                    
+                    // Menggunakan SCNxPTR agar lolos kompilasi di arsitektur 32-bit & 64-bit
+                    if (sscanf(line.c_str(), "%" SCNxPTR "-%" SCNxPTR, &start, &end) == 2) {
+                        active_ranges.push_back({start, end});
+                    }
                 }
             }
         }
@@ -48,4 +53,3 @@ namespace MemoryTools {
         *reinterpret_cast<float*>(address) = new_value;
     }
 }
-
