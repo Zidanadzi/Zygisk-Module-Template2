@@ -49,9 +49,12 @@ public:
 
         char line[256];
         while (fgets(line, sizeof(line), fp)) {
-            uintptr_t s, e;
+            unsigned int s, e;
             char perm[8], path[256];
-            if (sscanf(line, "%lx-%lx %s %*x %*s %*d %s", &s, &e, perm, path) < 3) continue;
+            memset(path, 0, sizeof(path));
+
+            // Perbaikan format sscanf agar tidak error di 32-bit
+            if (sscanf(line, "%x-%x %7s %*x %*s %*d %255s", &s, &e, perm, path) < 3) continue;
 
             bool shouldScan = false;
             switch (currentRange) {
@@ -63,7 +66,7 @@ public:
             }
 
             if (shouldScan) {
-                for (uintptr_t a = s; a < e - 4; a += 4) {
+                for (uintptr_t a = (uintptr_t)s; a < (uintptr_t)e - 4; a += 4) {
                     if (memcmp((void*)a, target, 4) == 0) results.push_back(a);
                 }
             }
