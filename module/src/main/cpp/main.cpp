@@ -27,35 +27,29 @@ int main(int argc, char *argv[])
     int Fitur = atoi(argv[1]); 
 
     {
+            {
         char pkg[100] = {0};
         
-        // Panggil fungsi pengecekan apk secara langsung dengan scope global (::)
-        if (::isapkrunning((char*)"com.tencent.ig") == 1)
-        {
-            sprintf(pkg, "com.tencent.ig");
-        }
-        else if (::isapkrunning((char*)"com.vng.pubgmobile") == 1)
-        {
-            sprintf(pkg, "com.vng.pubgmobile");
-        }
-        else if (::isapkrunning((char*)"com.pubg.krmobile") == 1)
-        {
-            sprintf(pkg, "com.pubg.krmobile");
-        }
-        else if (::isapkrunning((char*)"com.rekoo.pubgm") == 1)
-        {
-            sprintf(pkg, "com.rekoo.pubgm");
+        // Lewati fungsi isapkrunning, langsung gunakan getpid untuk mendeteksi nama proses sendiri
+        char self_proc[64];
+        sprintf(self_proc, "/proc/%d/cmdline", getpid());
+        FILE* f = fopen(self_proc, "r");
+        if (f) {
+            fgets(pkg, sizeof(pkg), f);
+            fclose(f);
+        } else {
+            // Jika gagal membaca cmdline, gunakan default aman
+            sprintf(pkg, "com.tencent.ig"); 
         }
 
         char getRoot[100] = {0};
         if (getuid() == 0) {
             sprintf(getRoot, "MODE_ROOT");
-        }
-        else {
+        } else {
             sprintf(getRoot, "MODE_NO_ROOT");
         }
 
-        // Jalankan inisialisasi memori secara langsung
+        // Jalankan inisialisasi dengan string nama paket yang sudah pasti valid
         ::initXMemoryTools(pkg, getRoot);
         
         LOGI("Zygisk meluncurkan Game: %s dengan Mode: %s, Menjalankan Fitur: %d", pkg, getRoot, Fitur);
