@@ -25,6 +25,9 @@ public:
     static int mem_fd;
 
     static void Init() { if(mem_fd < 0) mem_fd = open("/proc/self/mem", O_RDONLY); }
+    
+    // Pastikan fungsi ini dideklarasikan dengan benar
+    static void SetRange(MemoryRange range) { currentRange = range; }
 
     static bool VerifyValue(uintptr_t addr, std::string val, DataType type) {
         if (addr == 0) return false;
@@ -76,12 +79,17 @@ public:
     }
 };
 
+// Inisialisasi variabel statis di luar class
 MemoryRange MemoryTools::currentRange = RANGE_ANONYMOUS;
 int MemoryTools::mem_fd = -1;
 
 class MyModule : public ModuleBase {
 public:
-    void onLoad(Api *api, JNIEnv *env) override { this->api = api; this->env = env; MemoryTools::Init(); }
+    void onLoad(Api *api, JNIEnv *env) override { 
+        this->api = api; 
+        this->env = env; 
+        MemoryTools::Init(); 
+    }
 
     void postAppSpecialize(const AppSpecializeArgs *args) override {
         const char *process = env->GetStringUTFChars(args->nice_name, nullptr);
@@ -95,7 +103,6 @@ public:
                     if(ready) break;
                     sleep(2);
                 }
-                LOGD("Modul Ready. Monitoring...");
                 
                 while (true) {
                     std::ifstream f("/data/local/tmp/trigger.txt");
@@ -112,7 +119,7 @@ public:
                                 if (MemoryTools::VerifyValue(addr + 24, "178.0", TYPE_FLOAT) && 
                                     MemoryTools::VerifyValue(addr + 28, "15.0", TYPE_FLOAT)) {
                                     MemoryTools::MemoryPatchFloat(addr, 500.0f);
-                                    LOGD("Fitur 1 Applied: %lx", (unsigned long)addr);
+                                    LOGD("Fitur 1 Applied.");
                                 }
                             }
                         }
@@ -121,8 +128,8 @@ public:
                             auto addrs = MemoryTools::MemorySearch("1.0", TYPE_FLOAT);
                             for (auto addr : addrs) {
                                 MemoryTools::MemoryPatchFloat(addr, 0.0f);
+                                LOGD("Fitur 2 Applied.");
                             }
-                            LOGD("Fitur 2 Applied.");
                         }
                     }
                     sleep(2);
