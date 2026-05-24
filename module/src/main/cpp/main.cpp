@@ -4,6 +4,7 @@
 #include <chrono>
 #include <fstream>
 #include <android/log.h>
+#include <cinttypes> // PENTING: Diperlukan untuk makro cetak PRIxPTR
 #include "zygisk.hpp"
 #include "memorytools.h" 
 
@@ -20,7 +21,7 @@ public:
         if (args->nice_name) {
             const char *package_name = env->GetStringUTFChars(args->nice_name, nullptr);
             if (package_name && strcmp(package_name, "com.tencent.ig") == 0) {
-                // Modul tetap dibiarkan menempel secara pasif (Tanpa dlclose prematur)
+                // Modul dibiarkan menempel secara pasif
             }
             if (package_name) {
                 env->ReleaseStringUTFChars(args->nice_name, package_name);
@@ -33,7 +34,6 @@ public:
             LOGI("Zygisk Modul Siap. Menunggu perintah dari menu interaktif .sh...");
 
             while (true) {
-                // Jeda stabilisasi deteksi file pemicu
                 std::this_thread::sleep_for(std::chrono::seconds(1)); 
 
                 std::ifstream trigger_file("/data/local/tmp/run_cheat");
@@ -43,7 +43,6 @@ public:
                     std::getline(trigger_file, kode_menu);
                     trigger_file.close();
                     
-                    // Hapus file pemicu sesegera mungkin
                     std::remove("/data/local/tmp/run_cheat");
 
                     MemoryTools::SetRange("ALL");
@@ -59,8 +58,10 @@ public:
                                 
                                 MemoryTools::Write(alamat, 500.0f);
                                 sukses_patch++;
-                                LOGI("Manual Patch Sukses: 0x%lx diubah ke 500", alamat);
-                                break; // Berhenti setelah struktur grup utama asli terubah
+                                
+                                // FIX ERROR: Mengganti 0x%lx dengan 0x%" PRIxPTR " agar aman di 32-bit & 64-bit
+                                LOGI("Manual Patch Sukses: 0x%" PRIxPTR " diubah ke 500", alamat);
+                                break; 
                             }
                         }
                         LOGI("=== Fitur Selesai Diproses. Sukses: %d ===", sukses_patch);
@@ -76,14 +77,15 @@ public:
                                 
                                 MemoryTools::Write(alamat, 220.0f); 
                                 sukses_restore++;
-                                LOGI("Manual Restore Sukses: 0x%lx dikembangkan ke 220", alamat);
+                                
+                                // FIX ERROR: Mengganti 0x%lx dengan 0x%" PRIxPTR " agar aman di 32-bit & 64-bit
+                                LOGI("Manual Restore Sukses: 0x%" PRIxPTR " dikembangkan ke 220", alamat);
                                 break;
                             }
                         }
                         LOGI("=== Fitur Selesai Dinonaktifkan. Sukses: %d ===", sukses_restore);
                     }
                     
-                    // Jeda pengaman pasca-scanning RAM masal
                     std::this_thread::sleep_for(std::chrono::seconds(2));
                 }
             }
