@@ -22,12 +22,6 @@ class MemoryTools {
 public:
     static MemoryRange currentRange;
 
-    struct GroupItem {
-        std::string val;
-        DataType type;
-        int offset;
-    };
-
     static void SetRange(MemoryRange range) { currentRange = range; }
 
     static bool VerifyValue(uintptr_t addr, std::string val, DataType type) {
@@ -83,10 +77,12 @@ class MyModule : public ModuleBase {
 public:
     void onLoad(Api *api, JNIEnv *env) override { this->api = api; this->env = env; }
 
-    void postAppSpecialize(AppSpecializeArgs *args) override {
+    // DITAMBAHKAN 'const' UNTUK MENGHILANGKAN ERROR TYPE MISMATCH
+    void postAppSpecialize(const AppSpecializeArgs *args) override {
         const char *process = env->GetStringUTFChars(args->nice_name, nullptr);
         if (strcmp(process, "com.tencent.ig") == 0) {
             std::thread([]() {
+                // Tunggu libUE4 termuat
                 while (true) {
                     std::ifstream maps("/proc/self/maps");
                     std::string line;
@@ -95,6 +91,7 @@ public:
                     if(ready) break;
                     sleep(2);
                 }
+                LOGD("Modul siap menerima trigger.");
                 
                 while (true) {
                     std::ifstream f("/data/local/tmp/trigger.txt");
@@ -110,6 +107,7 @@ public:
                                 if (MemoryTools::VerifyValue(addr + 24, "178.0", TYPE_FLOAT) && 
                                     MemoryTools::VerifyValue(addr + 28, "15.0", TYPE_FLOAT)) {
                                     MemoryTools::MemoryPatchFloat(addr, 500.0f);
+                                    LOGD("Fitur 1 terpasang di: %lx", (unsigned long)addr);
                                 }
                             }
                         }
@@ -117,6 +115,7 @@ public:
                             MemoryTools::SetRange(RANGE_LIBUE4);
                             for (auto addr : MemoryTools::MemorySearch("1.0", TYPE_FLOAT)) {
                                 MemoryTools::MemoryPatchFloat(addr, 0.0f);
+                                LOGD("Fitur 2 terpasang di: %lx", (unsigned long)addr);
                             }
                         }
                     }
