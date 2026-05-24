@@ -13,9 +13,16 @@ struct little_map {
     std::int64_t value;
 };
 
-// Deklarasi fungsi dari MemoryTools Anda agar compiler tidak error
-extern int isapkrunning(const char* pkgName);
-extern void initXMemoryTools(const char* pkgName, const char* rootMode);
+// ... include-include Anda ...
+
+// Deklarasi fungsi utilitas bawaan MemoryTools Anda
+extern int isapkrunning(char* pkgName);
+extern void initXMemoryTools(char* pkgName, char* rootMode);
+
+// ──> TAMBAHKAN BARIS DEKLARASI INI DI SINI <──
+extern void MemorySearch(char* value, int type);
+extern void MemoryOffset(char* value, long offset, int type);
+extern void MemoryWrite(char* value, long offset, int type);
 
 int main(int argc, char *argv[]) 
 {
