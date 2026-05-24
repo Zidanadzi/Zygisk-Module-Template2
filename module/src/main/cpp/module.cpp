@@ -1,8 +1,8 @@
-// TAMBAHKAN INI DI BARIS PALING ATAS UNTUK MEMPERBAIKI ERROR dev_t DAN ino_t
 #include <sys/types.h> 
 
-// Baru diikuti oleh include yang lainnya
-#include <zygisk.hpp>
+// GANTI TANDA < > MENJADI " " SEPERTI DI BAWAH INI:
+#include "zygisk.hpp"
+
 #include <string.h>
 #include <fstream>
 #include <string>
