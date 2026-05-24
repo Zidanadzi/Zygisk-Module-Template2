@@ -1,13 +1,19 @@
-#include <zygisk.hpp>
+#include <sys/types.h> 
+
+// ──> PERBAIKAN: PASTIKAN MENGGUNAKAN TANDA KUTIP SEPERTI INI <──
+#include "zygisk.hpp"
+
 #include <string.h>
 #include <fstream>
 #include <string>
 #include <android/log.h>
-#include <thread> // ──> 1. WAJIB TAMBAHKAN LIBRARY THREAD INI di paling atas
+#include <thread> // Untuk mengamankan game agar tidak crash
+#include <unistd.h> // Diperlukan untuk fungsi sleep()
 
 #define LOG_TAG "ZygiskBridge"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
+// ... sisa kode fungsi JalankanDiBackground dan Class PerantaraZygisk ke bawah tetap sama ...
 extern int main(int argc, char *argv[]);
 
 // Membuat fungsi perantara lokal untuk membungkus susunan argumen ke dalam Thread
