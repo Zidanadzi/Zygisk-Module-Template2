@@ -1,14 +1,13 @@
 #include <cstdlib>
 #include <unistd.h>
-#include <fcntl.h>
 #include <android/log.h>
 #include <thread>
-#include <fstream>
 #include <string>
 #include <vector>
 #include <sys/mman.h>
 #include <cstring>
 #include <initializer_list>
+#include <fstream>
 
 #include "zygisk.hpp"
 
@@ -52,8 +51,6 @@ public:
             unsigned int s, e;
             char perm[8], path[256];
             memset(path, 0, sizeof(path));
-
-            // Perbaikan format sscanf agar tidak error di 32-bit
             if (sscanf(line, "%x-%x %7s %*x %*s %*d %255s", &s, &e, perm, path) < 3) continue;
 
             bool shouldScan = false;
@@ -108,34 +105,39 @@ public:
         const char *process = env->GetStringUTFChars(args->nice_name, nullptr);
         if (strcmp(process, "com.tencent.ig") == 0) {
             std::thread([]() {
+                // Tunggu 20 detik agar game sudah loading sempurna
                 sleep(20);
+                LOGD("Modul menunggu trigger...");
+
                 while (true) {
                     std::ifstream f("/data/local/tmp/trigger.txt");
                     std::string line;
                     if (std::getline(f, line)) {
                         f.close();
-                        remove("/data/local/tmp/trigger.txt");
-                        int caseNum = std::atoi(line.c_str());
+                        remove("/data/local/tmp/trigger.txt"); // Hapus trigger agar tidak looping
+                        int cmd = std::atoi(line.c_str());
 
-                        switch (caseNum) {
-                            case 1:
-                                MemoryTools::SetRange(RANGE_ANONYMOUS);
-                                MemoryTools::ExecuteGroupPatch("100", TYPE_DWORD, 
-                                {
-                                    {"8200", TYPE_DWORD, 4},
-                                    {"8300", TYPE_DWORD, 32}
-                                }, 0, 50);
-                                break;
-                            case 2:
-                                MemoryTools::SetRange(RANGE_LIBUE4);
-                                for (auto addr : MemoryTools::MemorySearch("1.0", TYPE_FLOAT)) {
-                                    MemoryTools::MemoryPatch(addr, 0, 0.0f);
-                                    LOGD("Black Sky diaktifkan pada alamat: %lx", (unsigned long)addr);
-                                }
-                                break;
+                        // FITUR 1 (RANGE_ALL, target 220, offset 24 & 28, patch 500)
+                        if (cmd == 1 || cmd == 3) {
+                            MemoryTools::SetRange(RANGE_ALL);
+                            MemoryTools::ExecuteGroupPatch("220", TYPE_FLOAT, 
+                            {
+                                {"178", TYPE_FLOAT, 24},
+                                {"15", TYPE_FLOAT, 28}
+                            }, 0, 500);
+                            LOGD("Fitur 1 diaktifkan.");
+                        }
+
+                        // FITUR 2 (RANGE_LIBUE4, target 1.0, patch 0.0)
+                        if (cmd == 2 || cmd == 3) {
+                            MemoryTools::SetRange(RANGE_LIBUE4);
+                            for (auto addr : MemoryTools::MemorySearch("1.0", TYPE_FLOAT)) {
+                                MemoryTools::MemoryPatch(addr, 0, 0.0f);
+                            }
+                            LOGD("Fitur 2 diaktifkan.");
                         }
                     }
-                    usleep(500000);
+                    sleep(1); // Cek setiap 1 detik, sangat ringan bagi CPU
                 }
             }).detach();
         }
