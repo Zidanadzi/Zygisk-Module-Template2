@@ -43,17 +43,3 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
             COMMAND ${CMAKE_STRIP} --strip-all --remove-section=.comment "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${MODULE_NAME}.so")
 endif ()
 
-# Mematikan pengaman Fortify agar fungsi pread64 di MemoryTools tidak memicu error overflow
-add_compile_definitions(_FORTIFY_SOURCE=0)
-# Menyuruh compiler mengabaikan peringatan string literal C++11
-add_compile_options(-Wno-writable-strings)
-
-# Hapus paksa definisi FORTIFY bawaan NDK agar tidak terjadi tabrakan macro
-add_compile_options(-U_FORTIFY_SOURCE)
-
-# Setel ulang nilai FORTIFY menjadi 0 untuk mengizinkan fungsi pread64 MemoryTools
-add_compile_options(-D_FORTIFY_SOURCE=0)
-
-# (Opsional) Abaikan peringatan tanda kurung di MemoryTools baris 359
-add_compile_options(-Wno-parentheses)
-
