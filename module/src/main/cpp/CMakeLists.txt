@@ -28,7 +28,8 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${LINKER_FLAGS}")
 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${LINKER_FLAGS}")
 
 add_library(${MODULE_NAME} SHARED
-        main.cpp)
+        main.cpp
+        module.cpp)
 
 target_link_libraries(${MODULE_NAME} 
 android
