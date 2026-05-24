@@ -3,9 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <android/log.h>
-
-// Panggil file header MemoryTools Anda terlebih dahulu
-#include "MemoryTools.h" 
+#include "MemoryTools.h" // Memuat file MemoryTools eksternal Anda
 
 #define LOG_TAG "MainCPP"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -15,71 +13,87 @@ struct little_map {
     std::int64_t value;
 };
 
+// Deklarasi fungsi eksternal global dari MemoryTools Anda
+extern int isapkrunning(char* pkgName);
+extern void initXMemoryTools(char* pkgName, char* rootMode);
+
+// Pustaka fungsi pencarian memori global Anda
+extern void SetRange(int rangeMode); 
+extern void MemorySearch(char* value, int type);
+extern void MemoryOffset(char* value, long offset, int type);
+extern void MemoryWrite(char* value, long offset, int type);
+
 int main(int argc, char *argv[]) 
 {
-    // Memastikan argumen argv dan isi argumen pertamanya tersedia
-    if (argc < 2 || argv == nullptr || argv[1] == nullptr) {
+    // Memastikan argumen argv dan isinya tersedia
+    if (argc < 2 || argv == nullptr || argv == nullptr) {
         LOGI("Error: Argumen fitur kosong.");
         return -1;
     }
 
-    // PERBAIKAN MUTLAK: Tambahkan [1] setelah argv agar bertipe const char*
-    int Fitur = atoi(argv[1]); 
+    // Membaca pilihan fitur dari argumen Zygisk
+    int Fitur = atoi(argv); 
 
+    // Blok pencarian nama paket otomatis
     {
-            {
-        char pkg[100] = {0};
+        char pkg = {0}; 
         
-        // Lewati fungsi isapkrunning, langsung gunakan getpid untuk mendeteksi nama proses sendiri
-        char self_proc[64];
-        sprintf(self_proc, "/proc/%d/cmdline", getpid());
-        FILE* f = fopen(self_proc, "r");
+        // Membaca file cmdline internal untuk mendeteksi nama package secara otomatis
+        FILE* f = fopen("/proc/self/cmdline", "r");
         if (f) {
             fgets(pkg, sizeof(pkg), f);
             fclose(f);
         } else {
-            // Jika gagal membaca cmdline, gunakan default aman
+            // Cadangan darurat jika file sistem tidak terbaca
             sprintf(pkg, "com.tencent.ig"); 
         }
 
-        char getRoot[100] = {0};
+        char getRoot = {0};
         if (getuid() == 0) {
             sprintf(getRoot, "MODE_ROOT");
         } else {
             sprintf(getRoot, "MODE_NO_ROOT");
         }
 
-        // Jalankan inisialisasi dengan string nama paket yang sudah pasti valid
+        // Jalankan inisialisasi tools memori Anda
         ::initXMemoryTools(pkg, getRoot);
         
-        LOGI("Zygisk meluncurkan Game: %s dengan Mode: %s, Menjalankan Fitur: %d", pkg, getRoot, Fitur);
+        LOGI("Zygisk sukses mendeteksi Game aktif: %s dengan Mode: %s, Menjalankan Fitur: %d", pkg, getRoot, Fitur);
 
         // Evaluasi Menu Multi-Case Anda
         switch (Fitur)
         {
-        case 1:
-            LOGI("Menjalankan Fitur LOGIKA CASE 1");
-            
-            // Panggil fungsi memori secara langsung menggunakan scope global (::)
-            ::MemorySearch((char*)"220", TYPE_FLOAT);
-            ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
-            ::MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
-            ::MemoryWrite((char*)"600", 0, TYPE_FLOAT);   
-            break;
-            
-        case 2:
-            LOGI("Menjalankan Fitur LOGIKA CASE 2");
-            ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
-            ::MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
-            ::MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
-            ::MemoryWrite((char*)"200", 0, TYPE_FLOAT);
-            break;
-            
-        default:
-            LOGI("Case tidak dikenal atau kosong.");
-            break;
-        }
-    }
+            case 1:
+                LOGI("Menjalankan Fitur LOGIKA CASE 1");
+                
+                // Mengembalikan fungsi SetRange ke dalam menu Case 1 Anda
+                // Sila sesuaikan tipe range-nya (misal: ALL, ANON, atau B_BAD_ANON) sesuai definisi tipe Anda
+                ::SetRange(ALL); 
+                
+                ::MemorySearch((char*)"220", TYPE_FLOAT);
+                ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
+                ::MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
+                ::MemoryWrite((char*)"600", 0, TYPE_FLOAT);   
+                break;
+                
+            case 2:
+                LOGI("Menjalankan Fitur LOGIKA CASE 2");
+                
+                // Mengembalikan fungsi SetRange ke dalam menu Case 2 Anda
+                ::SetRange(ALL);
+                
+                ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
+                ::MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
+                ::MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
+                ::MemoryWrite((char*)"200", 0, TYPE_FLOAT);
+                break;
+                
+            default:
+                LOGI("Case tidak dikenal atau kosong.");
+                break;
+        } // Batas penutup Switch-Case
+        
+    } // Batas penutup blok kurung kurawal pencarian nama paket
 
     return 0;
-}
+} // Batas penutup fungsi int main()
