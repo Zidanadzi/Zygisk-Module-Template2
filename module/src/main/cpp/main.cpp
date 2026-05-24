@@ -1,100 +1,104 @@
-#include <jni.h>
-#include <string>
-#include <thread>
-#include <chrono>
-#include <fstream>
-#include <android/log.h>
-#include <cinttypes> // PENTING: Diperlukan untuk makro cetak PRIxPTR
-#include "zygisk.hpp"
-#include "memorytools.h" 
+#include "MemoryTools.h"
+struct little_map
+{
+    std::uintptr_t address;
+    std::int64_t value;
+};
+int main(int argc, char *argv[])
+{
+    int Fitur = atoi(argv[1]);
+    {
+        char pkg[100];
+        if (isapkrunning("com.tencent.ig") == 1)
+        {
+            sprintf(pkg, "com.tencent.ig");
+        }
+        else if (isapkrunning("com.vng.pubgmobile") == 1)
+        {
+            sprintf(pkg, "com.vng.pubgmobile");
+        }
+        else if (isapkrunning("com.pubg.krmobile") == 1)
+        {
+            sprintf(pkg, "com.pubg.krmobile");
+        }
+        else if (isapkrunning("com.rekoo.pubgm") == 1)
+        {
+            sprintf(pkg, "com.rekoo.pubgm");
+        }
 
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "ZygiskMT", __VA_ARGS__)
+        char getRoot[100];
+        if (getuid() == 0) {
+            sprintf(getRoot, "MODE_ROOT");
+        }
+        else {
+            sprintf(getRoot, "MODE_NO_ROOT");
+        }
 
-class PerfectModule : public zygisk::ModuleBase {
-public:
-    void onLoad(zygisk::Api *api, JNIEnv *env) override {
-        this->api = api;
-        this->env = env;
-    }
-
-    void preAppSpecialize(zygisk::AppSpecializeArgs *args) override {
-        if (args->nice_name) {
-            const char *package_name = env->GetStringUTFChars(args->nice_name, nullptr);
-            if (package_name && strcmp(package_name, "com.tencent.ig") == 0) {
-                // Modul dibiarkan menempel secara pasif
-            }
-            if (package_name) {
-                env->ReleaseStringUTFChars(args->nice_name, package_name);
-            }
+        initXMemoryTools(pkg, getRoot);
+        switch (Fitur)
+        {
+        case 1:
+            //FITUR
+            SetSearchRange(ALL); //wide
+            MemorySearch("220", TYPE_FLOAT);
+            MemoryOffset("178", 0x18, TYPE_FLOAT);
+            MemoryOffset("15", 0x1C, TYPE_FLOAT);            
+            MemoryWrite("600", 0, TYPE_FLOAT);
+            ClearResults();            
+           
+            SetSearchRange(ALL); //black sky
+            MemorySearch("0.05000000075", TYPE_FLOAT);
+            MemoryOffset("3.4028235e38", -0x4, TYPE_FLOAT);
+            MemoryOffset("8.04061356e-15", 0x48, TYPE_FLOAT);
+            MemoryWrite("200", 0, TYPE_FLOAT);
+            ClearResults();      
+             
+            SetSearchRange(ALL); //wh
+            MemorySearch("2", TYPE_FLOAT);
+            MemoryOffset("4.20389539e-45", -0x88, TYPE_FLOAT);
+            MemoryOffset("2.29756896e-41", 0x30, TYPE_FLOAT);
+            MemoryOffset("5.60519386e-45", 0x64, TYPE_FLOAT);
+            MemoryWrite("120", 0, TYPE_FLOAT);
+            ClearResults();            
+            
+            SetSearchRange(ALL); //wh
+            MemorySearch("2", TYPE_FLOAT);
+            MemoryOffset("1.90576591e-43", -0x20, TYPE_FLOAT);
+            MemoryOffset("3.36311631e-44", -0x18, TYPE_FLOAT);
+            MemoryOffset("3.50324616e-44", 0x84, TYPE_FLOAT);
+            MemoryWrite("120", 0, TYPE_FLOAT);
+            ClearResults();            
+            
+            SetSearchRange(ALL); //bc
+            MemorySearch("8200", TYPE_DWORD);
+            MemoryOffset("8204", -0x8, TYPE_DWORD);
+            MemoryOffset("8199", -0x10, TYPE_DWORD); 
+            MemoryOffset("8196", -0x18, TYPE_DWORD);
+            MemoryWrite("6", 0, TYPE_DWORD);
+            ClearResults();           
+                    
+            SetSearchRange(ALL); //car1
+            MemorySearch("8200", TYPE_DWORD);
+            MemoryOffset("121", -0x18, TYPE_DWORD);
+            MemoryOffset("8192", -0x10, TYPE_DWORD); 
+            MemoryOffset("8196", -0x8, TYPE_DWORD);
+            MemoryOffset("8204", 0x8, TYPE_DWORD);
+            MemoryWrite("7", 0, TYPE_DWORD);
+            ClearResults();      
+                             
+            SetSearchRange(ALL); //car2
+            MemorySearch("8200", TYPE_DWORD);
+            MemoryOffset("169", -0x18, TYPE_DWORD);
+            MemoryOffset("8192", -0x10, TYPE_DWORD); 
+            MemoryOffset("8196", -0x8, TYPE_DWORD);
+            MemoryWrite("7", 0, TYPE_DWORD);
+            ClearResults();           
+                             
+                            
+            break;
+        case 2:
+            //FITUR                                    
+            break;
         }
     }
-
-    void postAppSpecialize(const zygisk::AppSpecializeArgs *args) override {
-        std::thread([]() {
-            LOGI("Zygisk Modul Siap. Menunggu perintah dari menu interaktif .sh...");
-
-            while (true) {
-                std::this_thread::sleep_for(std::chrono::seconds(1)); 
-
-                std::ifstream trigger_file("/data/local/tmp/run_cheat");
-                
-                if (trigger_file.good()) {
-                    std::string kode_menu;
-                    std::getline(trigger_file, kode_menu);
-                    trigger_file.close();
-                    
-                    std::remove("/data/local/tmp/run_cheat");
-
-                    MemoryTools::SetRange("ALL");
-
-                    if (kode_menu == "1") {
-                        LOGI("=== Menerima Perintah: AKTIFKAN FITUR ===");
-                        auto hasil_search = MemoryTools::Search(220.0f);
-                        int sukses_patch = 0;
-                        
-                        for (uintptr_t alamat : hasil_search) {
-                            if (std::fabs(MemoryTools::Offset(alamat, 24) - 178.0f) < 0.001f && 
-                                std::fabs(MemoryTools::Offset(alamat, 28) - 15.0f) < 0.001f) {
-                                
-                                MemoryTools::Write(alamat, 500.0f);
-                                sukses_patch++;
-                                
-                                // FIX ERROR: Mengganti 0x%lx dengan 0x%" PRIxPTR " agar aman di 32-bit & 64-bit
-                                LOGI("Manual Patch Sukses: 0x%" PRIxPTR " diubah ke 500", alamat);
-                                break; 
-                            }
-                        }
-                        LOGI("=== Fitur Selesai Diproses. Sukses: %d ===", sukses_patch);
-
-                    } else if (kode_menu == "2") {
-                        LOGI("=== Menerima Perintah: NONAKTIFKAN FITUR ===");
-                        auto hasil_search = MemoryTools::Search(500.0f);
-                        int sukses_restore = 0;
-                        
-                        for (uintptr_t alamat : hasil_search) {
-                            if (std::fabs(MemoryTools::Offset(alamat, 24) - 178.0f) < 0.001f && 
-                                std::fabs(MemoryTools::Offset(alamat, 28) - 15.0f) < 0.001f) {
-                                
-                                MemoryTools::Write(alamat, 220.0f); 
-                                sukses_restore++;
-                                
-                                // FIX ERROR: Mengganti 0x%lx dengan 0x%" PRIxPTR " agar aman di 32-bit & 64-bit
-                                LOGI("Manual Restore Sukses: 0x%" PRIxPTR " dikembangkan ke 220", alamat);
-                                break;
-                            }
-                        }
-                        LOGI("=== Fitur Selesai Dinonaktifkan. Sukses: %d ===", sukses_restore);
-                    }
-                    
-                    std::this_thread::sleep_for(std::chrono::seconds(2));
-                }
-            }
-        }).detach();
-    }
-
-private:
-    zygisk::Api *api;
-    JNIEnv *env;
-};
-
-REGISTER_ZYGISK_MODULE(PerfectModule)
+}
