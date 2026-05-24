@@ -11,7 +11,6 @@
 
 class PerfectModule : public zygisk::ModuleBase {
 public:
-    // Tambahkan variabel api untuk mempermudah akses env JNI jika dibutuhkan
     void onLoad(zygisk::Api *api, JNIEnv *env) override {
         this->api = api;
         this->env = env;
@@ -19,16 +18,13 @@ public:
 
     void preAppSpecialize(zygisk::AppSpecializeArgs *args) override {
         if (args->nice_name) {
-            // FIX ERROR 1: Mengubah jstring menjadi const char* C++ yang valid
             const char *package_name = env->GetStringUTFChars(args->nice_name, nullptr);
             
             if (package_name && strcmp(package_name, "com.tencent.ig") == 0) {
-                // FIX ERROR 2 & 3: Menghapus args->option lama yang sudah usang di API Zygisk Baru.
-                // Sebagai gantinya, kita beri tahu API Zygisk untuk tetap menempel di proses ini.
-                api->setOption(zygisk::Option::DLCLOSE_MODULE_PRE_FORK);
+                // FIX: Mengubah sesuai nama opsi yang dideklarasikan di zygisk.hpp Anda
+                api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
             }
             
-            // Lepaskan memori string JNI setelah selesai digunakan agar tidak leak
             if (package_name) {
                 env->ReleaseStringUTFChars(args->nice_name, package_name);
             }
