@@ -1,18 +1,18 @@
 #include <unistd.h>
-#include <android/log.h>
-#include <thread>
-#include <fstream>
-#include <vector>
-#include <sys/mman.h>
 #include <fcntl.h>
-#include <cstring>
+#include <android/log.h>
+#include <sys/mman.h>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <thread>
 #include "zygisk.hpp"
 
 using namespace zygisk;
 
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "MYMOD", __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "MyModule", __VA_ARGS__)
 
-enum Range { CODE_APP, ANONYMOUS, ALL, OTHER };
+enum Range { CODE_APP, ANONYMOUS, ALL };
 
 class MemoryTools {
 public:
@@ -21,11 +21,9 @@ public:
         return fd;
     }
 
-    // Fungsi MemoryOffset menggantikan VerifyValueStrict
     static bool MemoryOffset(uintptr_t addr, float val) {
         float mem_val;
-        if (pread(get_mem_fd(), &mem_val, 4, addr) != 4) return false;
-        return mem_val == val;
+        return (pread(get_mem_fd(), &mem_val, 4, addr) == 4 && mem_val == val);
     }
 
     static void Patch(uintptr_t addr, float val) {
@@ -37,30 +35,23 @@ public:
         }
     }
 
-    static std::vector<uintptr_t> Search(std::string val, Range range, const char* lib_name = nullptr) {
+    static std::vector<uintptr_t> Search(std::string val, Range range, const char* lib = nullptr) {
         std::vector<uintptr_t> results;
         float target = std::stof(val);
         FILE* fp = fopen("/proc/self/maps", "r");
         if (!fp) return results;
-
         char line[256];
         while (fgets(line, sizeof(line), fp)) {
             unsigned int s, e;
             char perms[5], path[256];
             sscanf(line, "%x-%x %4s %*x %*s %*s %s", &s, &e, perms, path);
-
-            bool match = false;
-            if (range == ALL) match = true;
-            else if (range == CODE_APP && lib_name && strstr(path, lib_name)) match = true;
-            else if (range == ANONYMOUS && strlen(path) == 0 && strstr(perms, "rw")) match = true;
-            else if (range == OTHER && strlen(path) > 0 && (!lib_name || !strstr(path, lib_name))) match = true;
-
+            bool match = (range == ALL) || 
+                         (range == CODE_APP && lib && strstr(path, lib)) ||
+                         (range == ANONYMOUS && strlen(path) == 0 && strstr(perms, "rw"));
             if (match) {
                 for (uintptr_t a = (uintptr_t)s; a < (uintptr_t)e - 4; a += 4) {
                     float buf;
-                    if (pread(get_mem_fd(), &buf, 4, a) == 4 && buf == target) {
-                        results.push_back(a);
-                    }
+                    if (pread(get_mem_fd(), &buf, 4, a) == 4 && buf == target) results.push_back(a);
                 }
             }
         }
@@ -71,27 +62,33 @@ public:
 
 class MyModule : public ModuleBase {
 public:
-    void postAppSpecialize(const AppSpecializeArgs *args) override {
+    void onLoad(Api *api, JNIEnv *env) override {
+        this->api = api;
+        this->env = env;
+    }
+
+    void preAppSpecialize(AppSpecializeArgs *args) override {
         const char *process = env->GetStringUTFChars(args->nice_name, nullptr);
+        
         if (process && strstr(process, "com.tencent.ig")) {
+            LOGD("Target Process Detected: %s", process);
+            
             std::thread([]() {
-                sleep(20);
+                sleep(20); // Safety delay
                 while (true) {
                     std::ifstream f("/data/local/tmp/trigger.txt");
                     std::string line;
                     if (std::getline(f, line)) {
                         remove("/data/local/tmp/trigger.txt");
                         int cmd = std::stoi(line);
-
-                        // Fitur 1 menggunakan MemoryOffset
+                        
                         if (cmd == 1 || cmd == 3) {
                             auto addrs = MemoryTools::Search("220.0", ANONYMOUS);
                             for (auto addr : addrs) {
                                 if (MemoryTools::MemoryOffset(addr + 24, 178.0f) && 
                                     MemoryTools::MemoryOffset(addr + 28, 15.0f)) {
-                                    
                                     MemoryTools::Patch(addr, 500.0f);
-                                    LOGD("Fitur 1 Patch Success (Offset Verified): %lx", (unsigned long)addr);
+                                    LOGD("Fitur 1 Patch Success: %lx", (unsigned long)addr);
                                 }
                             }
                         }
