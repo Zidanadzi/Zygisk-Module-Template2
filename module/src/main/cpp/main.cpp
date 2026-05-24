@@ -1,14 +1,35 @@
-#include "MemoryTools.h"
-struct little_map
-{
+#include <iostream>
+#include <cstdlib>
+#include <string.h>
+#include <unistd.h>
+#include <android/log.h>
+#include "MemoryTools.h" // Otomatis memuat file MemoryTools eksternal Anda
+
+#define LOG_TAG "MainCPP"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+
+struct little_map {
     std::uintptr_t address;
     std::int64_t value;
 };
-int main(int argc, char *argv[])
+
+// Deklarasi fungsi dari MemoryTools Anda agar compiler tidak error
+extern int isapkrunning(const char* pkgName);
+extern void initXMemoryTools(const char* pkgName, const char* rootMode);
+
+int main(int argc, char *argv[]) 
 {
-    int Fitur = atoi(argv[1]);
+    // Memastikan argumen argv[1] tersedia sebelum diproses oleh atoi
+    if (argc < 2 || argv[1] == nullptr) {
+        LOGI("Error: Argumen fitur kosong.");
+        return -1;
+    }
+
+    // Mengambil pilihan fitur sesuai awalan cpp Anda
+    int Fitur = atoi(argv[1]); 
+
     {
-        char pkg[100];
+        char pkg[100] = {0};
         if (isapkrunning("com.tencent.ig") == 1)
         {
             sprintf(pkg, "com.tencent.ig");
@@ -26,7 +47,7 @@ int main(int argc, char *argv[])
             sprintf(pkg, "com.rekoo.pubgm");
         }
 
-        char getRoot[100];
+        char getRoot[100] = {0};
         if (getuid() == 0) {
             sprintf(getRoot, "MODE_ROOT");
         }
@@ -34,11 +55,16 @@ int main(int argc, char *argv[])
             sprintf(getRoot, "MODE_NO_ROOT");
         }
 
+        // Jalankan inisialisasi bawaan memorytools Anda
         initXMemoryTools(pkg, getRoot);
+        
+        LOGI("Zygisk meluncurkan Game: %s dengan Mode: %s, Menjalankan Fitur: %d", pkg, getRoot, Fitur);
+
+        // Evaluasi Menu Multi-Case Anda
         switch (Fitur)
         {
         case 1:
-            //FITUR
+            LOGI("Menjalankan Fitur LOGIKA CASE 1");
             SetSearchRange(ALL); //wide
             MemorySearch("220", TYPE_FLOAT);
             MemoryOffset("178", 0x18, TYPE_FLOAT);
@@ -52,53 +78,23 @@ int main(int argc, char *argv[])
             MemoryOffset("8.04061356e-15", 0x48, TYPE_FLOAT);
             MemoryWrite("200", 0, TYPE_FLOAT);
             ClearResults();      
-             
-            SetSearchRange(ALL); //wh
-            MemorySearch("2", TYPE_FLOAT);
-            MemoryOffset("4.20389539e-45", -0x88, TYPE_FLOAT);
-            MemoryOffset("2.29756896e-41", 0x30, TYPE_FLOAT);
-            MemoryOffset("5.60519386e-45", 0x64, TYPE_FLOAT);
-            MemoryWrite("120", 0, TYPE_FLOAT);
-            ClearResults();            
-            
-            SetSearchRange(ALL); //wh
-            MemorySearch("2", TYPE_FLOAT);
-            MemoryOffset("1.90576591e-43", -0x20, TYPE_FLOAT);
-            MemoryOffset("3.36311631e-44", -0x18, TYPE_FLOAT);
-            MemoryOffset("3.50324616e-44", 0x84, TYPE_FLOAT);
-            MemoryWrite("120", 0, TYPE_FLOAT);
-            ClearResults();            
-            
-            SetSearchRange(ALL); //bc
-            MemorySearch("8200", TYPE_DWORD);
-            MemoryOffset("8204", -0x8, TYPE_DWORD);
-            MemoryOffset("8199", -0x10, TYPE_DWORD); 
-            MemoryOffset("8196", -0x18, TYPE_DWORD);
-            MemoryWrite("6", 0, TYPE_DWORD);
-            ClearResults();           
-                    
-            SetSearchRange(ALL); //car1
-            MemorySearch("8200", TYPE_DWORD);
-            MemoryOffset("121", -0x18, TYPE_DWORD);
-            MemoryOffset("8192", -0x10, TYPE_DWORD); 
-            MemoryOffset("8196", -0x8, TYPE_DWORD);
-            MemoryOffset("8204", 0x8, TYPE_DWORD);
-            MemoryWrite("7", 0, TYPE_DWORD);
-            ClearResults();      
-                             
-            SetSearchRange(ALL); //car2
-            MemorySearch("8200", TYPE_DWORD);
-            MemoryOffset("169", -0x18, TYPE_DWORD);
-            MemoryOffset("8192", -0x10, TYPE_DWORD); 
-            MemoryOffset("8196", -0x8, TYPE_DWORD);
-            MemoryWrite("7", 0, TYPE_DWORD);
-            ClearResults();           
-                             
-                            
             break;
+            
         case 2:
-            //FITUR                                    
+            LOGI("Menjalankan Fitur LOGIKA CASE 2");
+            // ──> MASUKKAN LOGIKA MANIPULASI MEMORI CASE 2 ANDA DI SINI <──
+            break;
+            
+        case 3:
+            LOGI("Menjalankan Fitur LOGIKA CASE 3");
+            // ──> MASUKKAN LOGIKA MANIPULASI MEMORI CASE 3 ANDA DI SINI <──
+            break;
+            
+        default:
+            LOGI("Case tidak dikenal atau kosong.");
             break;
         }
     }
+
+    return 0;
 }
