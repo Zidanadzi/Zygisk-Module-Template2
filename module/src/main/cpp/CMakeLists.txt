@@ -48,3 +48,12 @@ add_compile_definitions(_FORTIFY_SOURCE=0)
 # Menyuruh compiler mengabaikan peringatan string literal C++11
 add_compile_options(-Wno-writable-strings)
 
+# Hapus paksa definisi FORTIFY bawaan NDK agar tidak terjadi tabrakan macro
+add_compile_options(-U_FORTIFY_SOURCE)
+
+# Setel ulang nilai FORTIFY menjadi 0 untuk mengizinkan fungsi pread64 MemoryTools
+add_compile_options(-D_FORTIFY_SOURCE=0)
+
+# (Opsional) Abaikan peringatan tanda kurung di MemoryTools baris 359
+add_compile_options(-Wno-parentheses)
+
