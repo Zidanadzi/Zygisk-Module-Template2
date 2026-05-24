@@ -3,33 +3,24 @@
 #include <string.h>
 #include <unistd.h>
 #include <android/log.h>
-
-// ──> SISIPKAN 4 BARIS INI TEPAT DI ATAS INClUDE MEMORYTOOLS <──
-#ifdef pread64
-#undef pread64
-extern "C" ssize_t pread64(int fd, void* buf, size_t count, off64_t offset);
-#endif
-
-#include "MemoryTools.h" // File MemoryTools Anda dipanggil di sini
+#include "MemoryTools.h" // Otomatis memuat file MemoryTools eksternal Anda
 
 #define LOG_TAG "MainCPP"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-
-// ... sisa kode main.cpp ke bawahnya tetap sama seutuhnya ...
 
 struct little_map {
     std::uintptr_t address;
     std::int64_t value;
 };
 
-// HAPUS KATA 'const' AGAR SAMA PERSIS DENGAN MEMORYTOOLS ANDA
+// Deklarasi fungsi dari MemoryTools Anda tanpa kata 'const'
 extern int isapkrunning(char* pkgName);
 extern void initXMemoryTools(char* pkgName, char* rootMode);
 
 int main(int argc, char *argv[]) 
 {
-    // Memastikan argumen argv[1] tersedia sebelum diproses oleh atoi
-    if (argc < 2 || argv[1] == nullptr) {
+    // Memastikan argumen argv tersedia sebelum diproses oleh atoi
+    if (argc < 2 || argv == nullptr) {
         LOGI("Error: Argumen fitur kosong.");
         return -1;
     }
@@ -38,8 +29,9 @@ int main(int argc, char *argv[])
     int Fitur = atoi(argv[1]); 
 
     {
-                char pkg[100] = {0};
-        // Tambahkan (char*) di depan setiap nama paket aplikasi
+        // PERBAIKAN: Ubah menjadi array karakter agar bisa menampung teks string
+        char pkg[100] = {0};
+        
         if (isapkrunning((char*)"com.tencent.ig") == 1)
         {
             sprintf(pkg, "com.tencent.ig");
@@ -57,8 +49,17 @@ int main(int argc, char *argv[])
             sprintf(pkg, "com.rekoo.pubgm");
         }
 
+        // PERBAIKAN: Ubah menjadi array karakter agar tidak memicu error 'undeclared identifier'
+        char getRoot[100] = {0};
+        
+        if (getuid() == 0) {
+            sprintf(getRoot, "MODE_ROOT");
+        }
+        else {
+            sprintf(getRoot, "MODE_NO_ROOT");
+        }
 
-        // Jalankan inisialisasi bawaan memorytools Anda
+        // Jalankan inisialisasi bawaan memorytools Anda dengan aman
         initXMemoryTools(pkg, getRoot);
         
         LOGI("Zygisk meluncurkan Game: %s dengan Mode: %s, Menjalankan Fitur: %d", pkg, getRoot, Fitur);
@@ -67,19 +68,15 @@ int main(int argc, char *argv[])
         switch (Fitur)
         {
         case 1:
-            MemorySearch((char*)"220", TYPE_FLOAT);
-            MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
-            MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
-            MemoryWrite((char*)"600", 0, TYPE_FLOAT);
-    break;
-
+            LOGI("Menjalankan Fitur LOGIKA CASE 1");
+            // ──> MASUKKAN LOGIKA MANIPULASI MEMORI CASE 1 ANDA DI SINI <──
+            break;
+            
         case 2:
-            MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
-            MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
-            MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
-            MemoryWrite((char*)"200", 0, TYPE_FLOAT);
-    break;
-
+            LOGI("Menjalankan Fitur LOGIKA CASE 2");
+            // ──> MASUKKAN LOGIKA MANIPULASI MEMORI CASE 2 ANDA DI SINI <──
+            break;
+            
         case 3:
             LOGI("Menjalankan Fitur LOGIKA CASE 3");
             // ──> MASUKKAN LOGIKA MANIPULASI MEMORI CASE 3 ANDA DI SINI <──
