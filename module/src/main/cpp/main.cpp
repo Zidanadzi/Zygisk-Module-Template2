@@ -67,7 +67,7 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
                 usleep(300000); // Jeda 0.3 detik agar inisialisasi selesai mapan
                 
                 LOGI("🎯 MATCH STARTED: Menyuntikkan LOGIKA CASE 1...");
-                ::SetSearchRange(4); // Rentang memori ANON aman
+                ::SetSearchRange(1); // Rentang memori ANON aman
                 ::MemorySearch((char*)"220", TYPE_FLOAT);
                 usleep(200000);
                 ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
@@ -85,7 +85,7 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
                 usleep(300000);
                 
                 LOGI("🎯 MATCH STARTED: Menyuntikkan LOGIKA CASE 2...");
-                ::SetSearchRange(4);
+                ::SetSearchRange(1);
                 ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
                 usleep(200000);
                 ::MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
@@ -99,7 +99,7 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
                 LOGI("🔄 Fitur dalam kondisi nonaktif.");
             }
 
-            fitit_terakhir = FiturAktif; 
+            fitur_terakhir = FiturAktif; 
         }
 
         // Memeriksa berkas teks setiap 2 detik (Sangat ringan, beban CPU = 0%)
