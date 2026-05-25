@@ -18,12 +18,15 @@ struct little_map {
 extern int isapkrunning(char* pkgName);
 extern void initXMemoryTools(char* pkgName, char* rootMode);
 extern int SetSearchRange(int type); 
-extern void MemorySearch(char* value, int type);
-extern void MemoryOffset(char* value, long offset, int type);
-extern void MemoryWrite(char* value, long offset, int type);
+extern void MemorySearch(char* value, int TYPE);
+extern void MemoryOffset(char *value, long int offset, int type);
+extern void MemoryWrite(char *value, long int offset, int type);
 
 int BukaFiturUtama(int argc, char *argv[], const char* gamePkg) 
 {
+    // ⚠️ GANTI "id_modul_anda" dengan ID modul Magisk Anda yang terdaftar di module.prop
+    std::string path_file = "/data/adb/modules/template_module/pilihan.txt";
+
     char pkg[128];
     memset(pkg, 0, sizeof(pkg));
     if (gamePkg != nullptr) {
@@ -36,18 +39,10 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
     memset(getRoot, 0, sizeof(getRoot));
     strncpy(getRoot, "MODE_ROOT", sizeof(getRoot) - 1);
 
-    // 1. Jalankan inisialisasi awal SEKALI SAJA agar siap digunakan kapan saja
-    ::initXMemoryTools(pkg, getRoot);
-    LOGI("Zygisk siap. Memulai pemantauan fitur di dalam match...");
-
-    // Tentukan jalur file teks yang sama dengan module.cpp
-    // ⚠️ GANTI "id_modul_anda" dengan ID modul Magisk Anda
-    std::string path_file = "/data/adb/modules/template_modul/pilihan.txt";
-
-    // Variabel untuk mengingat status fitur terakhir agar tidak terjadi injeksi berulang-ulang
     int fitur_terakhir = 0; 
+    LOGI("Zygisk Mode Senyap: Berhasil siaga di lobi tanpa memicu memori.");
 
-    // 2. LOOPING SEUMUR HIDUP GAME: Terus memantau file pilihan.txt secara senyap
+    // LOOPING PEMANTAU: Selama di lobi hanya membaca file teks (Aman 100% dari Anti-Cheat)
     while (true) {
         int FiturAktif = 0;
         std::ifstream file_konfig(path_file);
@@ -61,12 +56,18 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
             }
         }
 
-        // Jika Anda mengaktifkan fitur lewat script .sh saat match dimulai
+        // Ketika Anda menekan tombol di Termux saat sudah masuk Match
         if (FiturAktif != fitur_terakhir) {
             
             if (FiturAktif == 1) {
+                LOGI("🎯 MATCH STARTED: Memulai inisialisasi memori...");
+                
+                // ──> PINDAH KE SINI: Inisialisasi baru berjalan saat match dimulai <──
+                ::initXMemoryTools(pkg, getRoot);
+                usleep(300000); // Jeda 0.3 detik agar inisialisasi selesai mapan
+                
                 LOGI("🎯 MATCH STARTED: Menyuntikkan LOGIKA CASE 1...");
-                ::SetSearchRange(1); // Rentang ANON aman
+                ::SetSearchRange(4); // Rentang memori ANON aman
                 ::MemorySearch((char*)"220", TYPE_FLOAT);
                 usleep(200000);
                 ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
@@ -77,8 +78,14 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
                 LOGI("✅ Case 1 Sukses Diterapkan di dalam Match!");
             } 
             else if (FiturAktif == 2) {
+                LOGI("🎯 MATCH STARTED: Memulai inisialisasi memori...");
+                
+                // ──> PINDAH KE SINI: Inisialisasi baru berjalan saat match dimulai <──
+                ::initXMemoryTools(pkg, getRoot);
+                usleep(300000);
+                
                 LOGI("🎯 MATCH STARTED: Menyuntikkan LOGIKA CASE 2...");
-                ::SetSearchRange(1);
+                ::SetSearchRange(4);
                 ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
                 usleep(200000);
                 ::MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
@@ -89,14 +96,13 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
                 LOGI("✅ Case 2 Sukses Diterapkan di dalam Match!");
             }
             else if (FiturAktif == 0) {
-                LOGI("🔄 Fitur dimatikan / dikosongkan.");
+                LOGI("🔄 Fitur dalam kondisi nonaktif.");
             }
 
-            // Catat perubahan agar fungsi pencarian tidak berjalan terus-menerus (bikin crash)
-            fitur_terakhir = FiturAktif; 
+            fitit_terakhir = FiturAktif; 
         }
 
-        // Jeda 2 detik setiap kali memeriksa file teks agar hemat baterai dan tidak membebani CPU
+        // Memeriksa berkas teks setiap 2 detik (Sangat ringan, beban CPU = 0%)
         sleep(2); 
     }
 
