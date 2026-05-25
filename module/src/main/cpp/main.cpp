@@ -24,16 +24,25 @@ extern void MemoryWrite(char *value, long int offset, int type);
 // Fungsi utama menerima lemparan data variabel gamePkg secara langsung dari module.cpp
 int BukaFiturUtama(int argc, char *argv[], const char* gamePkg) 
 {
-    if (argc < 2 || argv == nullptr || argv[1] == nullptr) {
+    if (argc < 2 || argv == nullptr || argv == nullptr) {
         LOGI("Error: Argumen fitur kosong.");
         return -1;
     }
 
-    int Fitur = atoi(argv[1]); 
+    // 1. Ambil nilai fitur dari file pilihan.txt Anda
+    int Fitur = atoi(argv); 
 
+    // ──> SOLUSI MUTLAK: PENYARING AWAL JIKA FITUR BELUM DIAKTIFKAN <──
+    // Jika file kosong, bernilai 0, atau bukan angka 1 & 2, LANGSUNG MATIKAN PROGRAM.
+    // Ini menjamin initXMemoryTools TIDAK AKAN PERNAH berjalan dan membuat game crash.
+    if (Fitur != 1 && Fitur != 2) {
+        LOGI("Modul Mode Siaga: Tidak ada fitur yang diaktifkan. Program selesai.");
+        return 0; 
+    }
+
+    // Kode di bawah ini HANYA AKAN BERJALAN jika Anda sudah mengetik angka 1 atau 2 di script .sh
     {
-        // PERBAIKAN: Mengunci deklarasi array karakter secara tegas sebesar 128 bita
-        char pkg[128];
+        char pkg;
         memset(pkg, 0, sizeof(pkg));
         
         if (gamePkg != nullptr) {
@@ -42,26 +51,26 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
             strncpy(pkg, "com.tencent.ig", sizeof(pkg) - 1); 
         }
 
-        // PERBAIKAN: Mengunci deklarasi array status root sebesar 32 bita
-        char getRoot[32];
+        char getRoot;
         memset(getRoot, 0, sizeof(getRoot));
         strncpy(getRoot, "MODE_ROOT", sizeof(getRoot) - 1);
 
-        // Menjalankan inisialisasi tools memori bawaan Anda secara aman
+        // Inisialisasi hanya dipicu saat fitur benar-benar akan disuntikkan
         ::initXMemoryTools(pkg, getRoot);
         
-        LOGI("Zygisk sukses mengunci Game aktif: %s, Mode: %s, Menjalankan Fitur: %d", pkg, getRoot, Fitur);
+        LOGI("Zygisk sukses memicu inisialisasi untuk Fitur: %d", Fitur);
 
-        // Evaluasi Menu Multi-Case Anda
         switch (Fitur)
         {
-
             case 1:
                 LOGI("Menjalankan Fitur LOGIKA CASE 1");
-                ::SetSearchRange(1); // Sesuaikan angka 1 dengan tipe range Anda (misal: ALL atau ANON)
+                ::SetSearchRange(1); // Disarankan menggunakan rentang ANON (4) agar aman dari anti-cheat
                 ::MemorySearch((char*)"220", TYPE_FLOAT);
+                usleep(200000);
                 ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
+                usleep(100000);
                 ::MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
+                usleep(100000);
                 ::MemoryWrite((char*)"600", 0, TYPE_FLOAT);   
                 break;
                 
@@ -69,13 +78,12 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
                 LOGI("Menjalankan Fitur LOGIKA CASE 2");
                 ::SetSearchRange(1);
                 ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
+                usleep(200000);
                 ::MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
+                usleep(100000);
                 ::MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
+                usleep(100000);
                 ::MemoryWrite((char*)"200", 0, TYPE_FLOAT);
-                break;
-                
-            default:
-                LOGI("Case kosong atau default aktif, membiarkan lobi tetap normal.");
                 break;
         } 
     } 
