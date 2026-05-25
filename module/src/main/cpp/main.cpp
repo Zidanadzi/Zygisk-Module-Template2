@@ -22,7 +22,7 @@ extern void MemoryOffset(char *value, long int offset, int type);
 extern void MemoryWrite(char *value, long int offset, int type);
 
 // Fungsi utama menerima lemparan data variabel gamePkg secara langsung dari module.cpp
-int main(int argc, char *argv[], const char* gamePkg) 
+int BukaFiturUtama(int argc, char *argv[], const char* gamePkg) 
 {
     if (argc < 2 || argv == nullptr || argv == nullptr) {
         LOGI("Error: Argumen fitur kosong.");
