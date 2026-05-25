@@ -66,7 +66,7 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
                 
                 if (FiturAktif == 1) {
                     LOGI("🎯 MATCH STARTED: Menyuntikkan LOGIKA CASE 1...");
-                    ::SetSearchRange(1); // 4 = Rentang ANON (Sesuai fungsi readmaps_a_anonmyous Anda)
+                    ::SetSearchRange(0); // 4 = Rentang ANON (Sesuai fungsi readmaps_a_anonmyous Anda)
                     ::MemorySearch((char*)"220", TYPE_FLOAT);
                     usleep(200000);
                     ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
@@ -78,7 +78,7 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
                 } 
                 else if (FiturAktif == 2) {
                     LOGI("🎯 MATCH STARTED: Menyuntikkan LOGIKA CASE 2...");
-                    ::SetSearchRange(1);
+                    ::SetSearchRange(0);
                     ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
                     usleep(200000);
                     ::MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
