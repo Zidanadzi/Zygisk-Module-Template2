@@ -3,6 +3,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <android/log.h>
+#include <fstream>
+#include <string>
 #include "MemoryTools.h" // Memuat file MemoryTools eksternal Anda
 
 #define LOG_TAG "MainCPP"
@@ -13,58 +15,58 @@ struct little_map {
     std::int64_t value;
 };
 
-// Deklarasi fungsi bawaan dari MemoryTools Anda
 extern int isapkrunning(char* pkgName);
 extern void initXMemoryTools(char* pkgName, char* rootMode);
 extern int SetSearchRange(int type); 
-extern void MemorySearch(char* value, int TYPE);
-extern void MemoryOffset(char *value, long int offset, int type);
-extern void MemoryWrite(char *value, long int offset, int type);
+extern void MemorySearch(char* value, int type);
+extern void MemoryOffset(char* value, long offset, int type);
+extern void MemoryWrite(char* value, long offset, int type);
 
-// Fungsi utama menerima lemparan data variabel gamePkg secara langsung dari module.cpp
 int BukaFiturUtama(int argc, char *argv[], const char* gamePkg) 
 {
-    if (argc < 2 || argv == nullptr || argv == nullptr) {
-        LOGI("Error: Argumen fitur kosong.");
-        return -1;
+    char pkg[128];
+    memset(pkg, 0, sizeof(pkg));
+    if (gamePkg != nullptr) {
+        strncpy(pkg, gamePkg, sizeof(pkg) - 1);
+    } else {
+        strncpy(pkg, "com.tencent.ig", sizeof(pkg) - 1); 
     }
 
-    // 1. Ambil nilai fitur dari file pilihan.txt Anda
-    int Fitur = atoi(argv); 
+    char getRoot[32];
+    memset(getRoot, 0, sizeof(getRoot));
+    strncpy(getRoot, "MODE_ROOT", sizeof(getRoot) - 1);
 
-    // ──> SOLUSI MUTLAK: PENYARING AWAL JIKA FITUR BELUM DIAKTIFKAN <──
-    // Jika file kosong, bernilai 0, atau bukan angka 1 & 2, LANGSUNG MATIKAN PROGRAM.
-    // Ini menjamin initXMemoryTools TIDAK AKAN PERNAH berjalan dan membuat game crash.
-    if (Fitur != 1 && Fitur != 2) {
-        LOGI("Modul Mode Siaga: Tidak ada fitur yang diaktifkan. Program selesai.");
-        return 0; 
-    }
+    // 1. Jalankan inisialisasi awal SEKALI SAJA agar siap digunakan kapan saja
+    ::initXMemoryTools(pkg, getRoot);
+    LOGI("Zygisk siap. Memulai pemantauan fitur di dalam match...");
 
-    // Kode di bawah ini HANYA AKAN BERJALAN jika Anda sudah mengetik angka 1 atau 2 di script .sh
-    {
-        char pkg;
-        memset(pkg, 0, sizeof(pkg));
+    // Tentukan jalur file teks yang sama dengan module.cpp
+    // ⚠️ GANTI "id_modul_anda" dengan ID modul Magisk Anda
+    std::string path_file = "/data/adb/modules/template_modul/pilihan.txt";
+
+    // Variabel untuk mengingat status fitur terakhir agar tidak terjadi injeksi berulang-ulang
+    int fitur_terakhir = 0; 
+
+    // 2. LOOPING SEUMUR HIDUP GAME: Terus memantau file pilihan.txt secara senyap
+    while (true) {
+        int FiturAktif = 0;
+        std::ifstream file_konfig(path_file);
         
-        if (gamePkg != nullptr) {
-            strncpy(pkg, gamePkg, sizeof(pkg) - 1);
-        } else {
-            strncpy(pkg, "com.tencent.ig", sizeof(pkg) - 1); 
+        if (file_konfig.is_open()) {
+            std::string teks_bacaan;
+            std::getline(file_konfig, teks_bacaan);
+            file_konfig.close();
+            if (!teks_bacaan.empty()) {
+                FiturAktif = atoi(teks_bacaan.c_str());
+            }
         }
 
-        char getRoot;
-        memset(getRoot, 0, sizeof(getRoot));
-        strncpy(getRoot, "MODE_ROOT", sizeof(getRoot) - 1);
-
-        // Inisialisasi hanya dipicu saat fitur benar-benar akan disuntikkan
-        ::initXMemoryTools(pkg, getRoot);
-        
-        LOGI("Zygisk sukses memicu inisialisasi untuk Fitur: %d", Fitur);
-
-        switch (Fitur)
-        {
-            case 1:
-                LOGI("Menjalankan Fitur LOGIKA CASE 1");
-                ::SetSearchRange(1); // Disarankan menggunakan rentang ANON (4) agar aman dari anti-cheat
+        // Jika Anda mengaktifkan fitur lewat script .sh saat match dimulai
+        if (FiturAktif != fitur_terakhir) {
+            
+            if (FiturAktif == 1) {
+                LOGI("🎯 MATCH STARTED: Menyuntikkan LOGIKA CASE 1...");
+                ::SetSearchRange(1); // Rentang ANON aman
                 ::MemorySearch((char*)"220", TYPE_FLOAT);
                 usleep(200000);
                 ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
@@ -72,10 +74,10 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
                 ::MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
                 usleep(100000);
                 ::MemoryWrite((char*)"600", 0, TYPE_FLOAT);   
-                break;
-                
-            case 2:
-                LOGI("Menjalankan Fitur LOGIKA CASE 2");
+                LOGI("✅ Case 1 Sukses Diterapkan di dalam Match!");
+            } 
+            else if (FiturAktif == 2) {
+                LOGI("🎯 MATCH STARTED: Menyuntikkan LOGIKA CASE 2...");
                 ::SetSearchRange(1);
                 ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
                 usleep(200000);
@@ -84,9 +86,19 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
                 ::MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
                 usleep(100000);
                 ::MemoryWrite((char*)"200", 0, TYPE_FLOAT);
-                break;
-        } 
-    } 
+                LOGI("✅ Case 2 Sukses Diterapkan di dalam Match!");
+            }
+            else if (FiturAktif == 0) {
+                LOGI("🔄 Fitur dimatikan / dikosongkan.");
+            }
+
+            // Catat perubahan agar fungsi pencarian tidak berjalan terus-menerus (bikin crash)
+            fitur_terakhir = FiturAktif; 
+        }
+
+        // Jeda 2 detik setiap kali memeriksa file teks agar hemat baterai dan tidak membebani CPU
+        sleep(2); 
+    }
 
     return 0;
 }
