@@ -24,33 +24,38 @@ extern void MemoryWrite(char *value, long int offset, int type);
 // Fungsi utama menerima lemparan data variabel gamePkg secara langsung dari module.cpp
 int BukaFiturUtama(int argc, char *argv[], const char* gamePkg) 
 {
-    if (argc < 2 || argv == nullptr || argv == nullptr) {
+    if (argc < 2 || argv == nullptr || argv[1] == nullptr) {
         LOGI("Error: Argumen fitur kosong.");
         return -1;
     }
 
-    int Fitur = atoi(argv); 
+    int Fitur = atoi(argv[1]); 
 
     {
-        char pkg = {0}; 
+        // PERBAIKAN: Mengunci deklarasi array karakter secara tegas sebesar 128 bita
+        char pkg[128];
+        memset(pkg, 0, sizeof(pkg));
+        
         if (gamePkg != nullptr) {
-            sprintf(pkg, "%s", gamePkg);
+            strncpy(pkg, gamePkg, sizeof(pkg) - 1);
         } else {
-            sprintf(pkg, "com.tencent.ig"); // Cadangan darurat jika kosong
+            strncpy(pkg, "com.tencent.ig", sizeof(pkg) - 1); 
         }
 
-        // Memaksa inisialisasi berjalan dengan akses penuh di lingkungan Zygisk
-        char getRoot = {0};
-        sprintf(getRoot, "MODE_ROOT");
+        // PERBAIKAN: Mengunci deklarasi array status root sebesar 32 bita
+        char getRoot[32];
+        memset(getRoot, 0, sizeof(getRoot));
+        strncpy(getRoot, "MODE_ROOT", sizeof(getRoot) - 1);
 
-        // Menjalankan inisialisasi tools memori bawaan Anda dengan aman
+        // Menjalankan inisialisasi tools memori bawaan Anda secara aman
         ::initXMemoryTools(pkg, getRoot);
         
-        LOGI("Zygisk sukses mengunci Game aktif: %s, Mode: %s, Menjalankan Fitur: %d", (const char*)pkg, (const char*)getRoot, Fitur);
+        LOGI("Zygisk sukses mengunci Game aktif: %s, Mode: %s, Menjalankan Fitur: %d", pkg, getRoot, Fitur);
 
         // Evaluasi Menu Multi-Case Anda
         switch (Fitur)
         {
+
             case 1:
                 LOGI("Menjalankan Fitur LOGIKA CASE 1");
                 ::SetSearchRange(1); // Sesuaikan angka 1 dengan tipe range Anda (misal: ALL atau ANON)
