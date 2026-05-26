@@ -6,56 +6,87 @@
 #include <fstream>
 #include <string>
 #include <fcntl.h>
-#include <dlfcn.h> // Diperlukan untuk mengambil alamat library game secara internal
+#include <sys/inotify.h> // ──> PENGAMAN UTAMA: Menggunakan file watcher Linux
 
-// Panggil file header MemoryTools asli Anda di sini
 #include "MemoryTools.h" 
 
 #define LOG_TAG "MainCPP"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
-// Deklarasikan variabel global bawaan dari dalam file MemoryTools.h Anda
 extern int handle;
+extern char bm; 
 
-// PERBAIKAN MUTLAK: Tambahkan ukuran array [64] agar sama persis dengan MemoryTools.h
-extern char bm[64]; 
-
-// Struktur internal untuk memaksa pengalihan rentang pencarian MemoryTools Anda
-struct PetaMemoriLokal {
-    uintptr_t awal;
-    uintptr_t akhir;
-};
-
-// Fungsi cerdas untuk mendapatkan alamat dasar libUE4.so dari dalam proses Zygisk
-uintptr_t DapatkanBaseAddressGame(const char* nama_so) {
-    void* handle_so = dlopen(nama_so, RTLD_NOLOAD);
-    if (!handle_so) {
-        handle_so = dlopen(nama_so, RTLD_LAZY);
-    }
+// Fungsi untuk mengeksekusi logika asli MemoryTools Anda
+void EksekusiSuntikMemori(int FiturAktif, const char* gamePkg) {
+    LOGI("🎯 MATCH TRIGGERED: Mengaktifkan gerbang memori lokal...");
     
-    if (handle_so) {
-        void* simbol = dlsym(handle_so, "RegisterNatives"); // Mencari fungsi standar JNI Android
-        Dl_info info;
-        if (dladdr(simbol, &info) != 0) {
-            dlclose(handle_so);
-            return (uintptr_t)info.dli_fbase; // Mengembalikan alamat dasar asli library game
-        }
-        dlclose(handle_so);
+    if (gamePkg != nullptr) strncpy(bm, gamePkg, 63);
+    handle = open("/proc/self/mem", O_RDWR);
+    if (handle == -1) handle = open("/dev/null", O_RDWR);
+    lseek(handle, 0, SEEK_SET);
+
+    if (FiturAktif == 1) {
+        LOGI("🎯 IN-MATCH: Menyuntikkan CASE 1...");
+        ::SetSearchRange(ALL); 
+        ::MemorySearch((char*)"220", TYPE_FLOAT);
+        usleep(150000);
+        ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
+        usleep(100000);
+        ::MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
+        usleep(100000);
+        ::MemoryWrite((char*)"600", 0, TYPE_FLOAT);   
+        LOGI("✅ CASE 1 BERHASIL DIAKTIFKAN!");
+    } 
+    else if (FiturAktif == 2) {
+        LOGI("🎯 IN-MATCH: Menyuntikkan CASE 2...");
+        ::SetSearchRange(ALL);
+        ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
+        usleep(150000);
+        ::MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
+        usleep(100000);
+        ::MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
+        uskeep(100000);
+        ::MemoryWrite((char*)"200", 0, TYPE_FLOAT);
+        LOGI("✅ CASE 2 BERHASIL DIAKTIFKAN!");
     }
-    return 0;
+
+    if (handle > 0) {
+        close(handle);
+        handle = -1;
+    }
 }
 
 int BukaFiturUtama(int argc, char *argv[], const char* gamePkg) 
 {
-    std::string path_file = "/data/adb/modules/template_module/pilihan.txt"; // ⚠️ SESUAIKAN ID MODUL ANDA
-    int fitur_terakhir = 0; 
+    // ⚠️ GANTI "id_modul_anda" dengan ID modul Magisk Anda yang terdaftar di module.prop
+    std::string path_modul = "/data/adb/modules/template_module";
+    std::string path_file = path_modul + "/pilihan.txt";
 
-    LOGI("Zygisk Active Loop Engine: Siaga menunggu aktivasi di dalam Match.");
+    LOGI("Zygisk Inotify Engine: Siaga tanpa membebani sistem CPU.");
 
+    // 1. Inisialisasi inotify untuk memantau perubahan file secara native
+    int fd = inotify_init();
+    if (fd < 0) {
+        LOGI("❌ Gagal menginisialisasi inotify");
+        return -1;
+    }
+
+    // 2. Pasang pengawas khusus pada folder modul (Mendeteksi jika file pilihan.txt dimodifikasi)
+    int wd = inotify_add_watch(fd, path_modul.c_str(), IN_MODIFY | IN_CREATE);
+
+    char buffer[BUF_LEN];
+    int fitur_terakhir = 0;
+
+    // 3. LOOPING AMAN: Loop ini akan BERHENTI (FREEZE) total dan tidak memakan CPU 
+    // sampai Anda mengubah isi file via script .sh
     while (true) {
+        // Baris read() di bawah ini akan mengunci thread secara damai (menunggu sinyal teks)
+        int length = read(fd, buffer, BUF_LEN);
+        if (length < 0) break;
+
+        // Jika ada perubahan file pilihan.txt di dalam match
         int FiturAktif = 0;
         std::ifstream file_konfig(path_file);
-        
         if (file_konfig.is_open()) {
             std::string teks_bacaan;
             std::getline(file_konfig, teks_bacaan);
@@ -65,71 +96,14 @@ int BukaFiturUtama(int argc, char *argv[], const char* gamePkg)
             }
         }
 
-        if (FiturAktif != fitur_terakhir) {
-            
-            if (FiturAktif == 1 || FiturAktif == 2) {
-                LOGI("🎯 MATCH STARTED: Mengaktifkan gerbang memori lokal...");
-                
-                // Bypass handle memori internal agar tidak memicu exit(1) dari getPID
-                if (gamePkg != nullptr) strcpy(bm, gamePkg);
-                handle = open("/proc/self/mem", O_RDWR);
-                if (handle == -1) handle = open("/dev/null", O_RDWR);
-                lseek(handle, 0, SEEK_SET);
-
-                // ──> BYPASS PETA MEMORI (MAPS) UNTUK MEMORYSEARCH ANDA <──
-                // Kita ambil alamat memori libUE4.so asli secara internal tanpa membaca berkas /proc/self/maps
-                uintptr_t base_game = DapatkanBaseAddressGame("libUE4.so");
-                if (base_game == 0) {
-                    base_game = DapatkanBaseAddressGame("libanubis.so"); // Cadangan untuk beberapa versi PUBG
-                }
-
-                LOGI("Base Address Game Berhasil Dikunci: 0x%lx", base_game);
-
-                if (FiturAktif == 1) {
-                    LOGI("🎯 MATCH STARTED: Menyuntikkan LOGIKA CASE 1...");
-                    
-                    // Kita paksa rentang pencarian mencari di area libUE4.so murni (Aman dari Anti-Cheat & Akurat)
-                    ::SetSearchRange(ALL); 
-                    
-                    // Jalankan baris logika asli yang Anda inginkan tanpa ada perubahan
-                    ::MemorySearch((char*)"220", TYPE_FLOAT);
-                    usleep(200000);
-                    ::MemoryOffset((char*)"178", 0x18, TYPE_FLOAT);
-                    usleep(100000);
-                    ::MemoryOffset((char*)"15", 0x1C, TYPE_FLOAT);            
-                    usleep(100000);
-                    ::MemoryWrite((char*)"600", 0, TYPE_FLOAT);   
-                    
-                    LOGI("✅ Logika Case 1 Sukses Dieksekusi!");
-                } 
-                else if (FiturAktif == 2) {
-                    LOGI("🎯 MATCH STARTED: Menyuntikkan LOGIKA CASE 2...");
-                    
-                    ::SetSearchRange(ALL);
-                    ::MemorySearch((char*)"0.05000000075", TYPE_FLOAT);
-                    usleep(200000);
-                    ::MemoryOffset((char*)"3.4028235e38", -0x4, TYPE_FLOAT);
-                    usleep(100000);
-                    ::MemoryOffset((char*)"8.04061356e-15", 0x48, TYPE_FLOAT);
-                    usleep(100000);
-                    ::MemoryWrite((char*)"200", 0, TYPE_FLOAT);
-                    
-                    LOGI("✅ Logika Case 2 Sukses Dieksekusi!");
-                }
-            }
-            else if (FiturAktif == 0) {
-                LOGI("🔄 Semua fitur dinonaktifkan.");
-                if (handle > 0) {
-                    close(handle);
-                    handle = -1;
-                }
-            }
-
-            fitur_terakhir = FiturAktif; 
+        if (FiturAktif != fitur_terakhir && (FiturAktif == 1 || FiturAktif == 2)) {
+            // Jalankan fungsi memori murni tanpa me-restart game
+            EksekusiSuntikMemori(FiturAktif, gamePkg);
+            fitur_terakhir = FiturAktif;
         }
-
-        sleep(2); 
     }
 
+    inotify_rm_watch(fd, wd);
+    close(fd);
     return 0;
 }
