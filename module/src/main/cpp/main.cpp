@@ -16,7 +16,9 @@
 
 // Deklarasikan variabel global bawaan dari dalam file MemoryTools.h Anda
 extern int handle;
-extern char bm; 
+
+// PERBAIKAN MUTLAK: Tambahkan ukuran array [64] agar sama persis dengan MemoryTools.h
+extern char bm[64]; 
 
 // Struktur internal untuk memaksa pengalihan rentang pencarian MemoryTools Anda
 struct PetaMemoriLokal {
